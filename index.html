@@ -2,6 +2,7 @@
 <html>
     <head>
         <title>It's for you, Z</title>
+        <link rel="shortcut icon" href="https://img.icons8.com/color/96/like--v1.png">
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,7 +13,7 @@
                 margin: 0;
                 padding: 0;
             }
-        
+
             #mtext {
                 margin: auto;
                 position: absolute;
@@ -22,18 +23,16 @@
                 text-align: center;
                 top: 20%;
             }
-        
+
             #mtext.thidden {
                 display: none;
             }
-        
+
             canvas {
                 background: rgb(3, 0, 17);
                 position: absolute;
                     top: 0;
             }
-        
-        
         </style>
     </head>
     <body style="background-color: black;">
@@ -49,7 +48,7 @@
                 this.rChange = 0.03;
                 this.color = color;
             }
-    
+
             Star.prototype = {
                 constructor: Star,
                 render: function() {
@@ -67,24 +66,24 @@
                     this.r += this.rChange;
                 }
             }
-    
+
             var canvas = document.getElementById("canvas");
             var context = canvas.getContext("2d");
-    
+
             var C_WIDTH = canvas.width = document.body.offsetWidth;
             var C_HEIGHT = canvas.height = document.body.offsetHeight;
-    
+
             function randomColor(){
                     var arrColors = ["ffffff", "ffecd3" , "bfcfff"];
                     return "#"+arrColors[Math.floor((Math.random()*3))];
             }
-    
+
             var arrStars = [];
             for(i = 0; i < 313; i++){
                 var randX = Math.floor((Math.random()*C_WIDTH)+1);
                 var randY = Math.floor((Math.random()*C_HEIGHT)+1);
                 var randR = Math.random() * 1.3 + .5;
-    
+
                 var star = new Star(randX, randY, randR, randomColor());
                 arrStars.push(star);
             }
@@ -92,7 +91,7 @@
                 var randX = Math.floor((Math.random()*C_WIDTH)+1);
                 var randY = Math.floor((Math.random()*C_HEIGHT)+1);
                 var randR = Math.random() * 0.5 + .3;
-    
+
                 var star = new Star(randX, randY, randR, randomColor());
                 arrStars.push(star);
             }
@@ -100,11 +99,11 @@
                 var randX = Math.floor((Math.random()*C_WIDTH)+1);
                 var randY = Math.floor((Math.random()*C_HEIGHT)+1);
                 var randR = Math.random() * 0.3 + .1;
-    
+
                 var star = new Star(randX, randY, randR, randomColor());
                 arrStars.push(star);
             }
-    
+
             function animate(){
                 for(var i = 0; i < arrStars.length; i++) {
                     arrStars[i].update();
@@ -115,10 +114,10 @@
                 }
                 requestAnimationFrame(animate);
             }
-    
+
             var count = 0;
             var last_index = 0;
-    
+
             function randomText(e) {
                 var choices = ["♥", "Z", "J", "W", "D", "K", "Q", "♥", "Z", "J", "W", "D", "K", "Q"];
                 if (count > 3) {
@@ -138,27 +137,15 @@
                 count++;
                 return false;
             }
-    
+
             function hideText(e) {
                 mtext.classList.add("thidden");
                 return false;
             }
 
-            function changeFavicon(link) {
-                let favicon = document.querySelector('link[rel="icon"]');
-                if (favicon !== null) {
-                    favicon.href = link;
-                } else {
-                    favicon = document.createElement("link");
-                    favicon.rel = "icon";
-                    favicon.href = link;
-                    document.head.appendChild(favicon);
-                }
-            }
-            
             function start_main() {
                 animate();
-        
+
                 document.oncontextmenu = (e) => {
                     e.preventDefault()
                     return false;
@@ -171,13 +158,11 @@
                     e.preventDefault()
                     return false;
                 }
-    
+
                 canvas.onmousedown = randomText;
                 canvas.onmouseup = hideText;
                 canvas.ontouchstart = randomText;
                 canvas.ontouchend = hideText;
-
-                changeFavicon("https://icons8.com/icon/12306/heart")
             }
 
             start_main();
