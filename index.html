@@ -29,7 +29,11 @@
             }
 
             canvas {
-                background: rgb(8, 140, 235);
+                background: linear-gradient(
+                    to bottom,
+                    rgb(107, 48, 158),
+                    rgb(145, 116, 1) 80%,
+                    rgb(192, 92, 4));
                 position: absolute;
                 top: 0;
             }
@@ -117,7 +121,6 @@
 
             var count = 0;
             var last_index = 0;
-
             function randomText(e) {
                 var choices = ["♥", "Z", "J", "W", "D", "K", "Q", "♥", "Z", "J", "W", "D", "K", "Q"];
                 if (count > 3) {
@@ -143,18 +146,75 @@
                 return false;
             }
 
-            function changeBackground() {
-                var nowHour = new Date().getHours();
-                if (nowHour > 19 || nowHour < 5) {
-                    canvas.style.backgroundColor = "rgb(3, 0, 17)";
-                } else {
-                    canvas.style.backgroundColor = "rgb(8, 140, 235)";
+            var day = [[8, 140, 235], [8, 140, 235], [8, 140, 235]];
+            var dawn = [[107, 48, 158], [145, 116, 1], [192, 92, 4]];
+            var night = [[3, 0, 17], [3, 0, 17], [3, 0, 17]];
+            function computeBackground(grad1, grad2, point) {
+                var bg = "linear-gradient(to bottom, ";
+                for (var i = 0; i < 3; i++) {
+                    var red = Math.floor(grad1[i][0] + (grad2[i][0] - grad1[i][0])*point);
+                    var green = Math.floor(grad1[i][1] + (grad2[i][1] - grad1[i][1])*point);
+                    var blue = Math.floor(grad1[i][2] + (grad2[i][2] - grad1[i][2])*point);
+                    bg += "rgb("+red+", "+green+", "+blue+")";
+                    if (i == 1) {
+                        bg += " 80%";
+                    }
+                    if (i <= 1) {
+                        bg += ", ";
+                    }
                 }
+                bg += ")";
+                return bg
+            }
+
+            function changeBackground() {
+                var now = new Date();
+                var nowHour = now.getHours();
+                var nowMinutes = now.getMinutes();
+                // var nowHour = now.getMinutes()%24+3;
+                // var nowMinutes = now.getSeconds();
+                var timePoint = nowHour * 60 + nowMinutes;
+                var grad1, grad2, point, bg;
+                if (timePoint >= 5*60+9 && timePoint < 5*60+39) {
+                    grad1 = night;
+                    grad2 = dawn;
+                    point = (timePoint - (5*60+9))/30.0;
+                    bg = computeBackground(grad1, grad2, point);
+                } else if (timePoint >= 5*60+39 && timePoint < 6*60+9) {
+                    grad1 = dawn;
+                    grad2 = day;
+                    point = (timePoint - (5*60+39))/30.0;
+                    bg = computeBackground(grad1, grad2, point);
+                } else if (timePoint >= 6*60+9 && timePoint < 18*60+19) {
+                    bg = "rgb(8, 140, 235)";
+                    grad1 = day;
+                    grad2 = day;
+                    point = 0;
+                    bg = computeBackground(grad1, grad2, point);
+                } else if (timePoint >= 18*60+19 && timePoint < 18*60+49) {
+                    grad1 = day;
+                    grad2 = dawn;
+                    point = (timePoint - (18*60+19))/30.0;
+                    bg = computeBackground(grad1, grad2, point);
+                } else if (timePoint >= 18*60+49 && timePoint < 19*60+19) {
+                    grad1 = dawn;
+                    grad2 = night;
+                    point = (timePoint - (18*60+49))/30.0;
+                    bg = computeBackground(grad1, grad2, point);
+                } else {
+                    bg = "rgb(3, 0, 17)";
+                    grad1 = night;
+                    grad2 = night;
+                    point = 0;
+                    bg = computeBackground(grad1, grad2, point);
+                }
+                // console.log(nowHour, nowMinutes, timePoint, bg);
+                canvas.style.background = bg;
             }
 
             function start_main() {
                 changeBackground();
-                setInterval(changeBackground, 1);
+                setInterval(changeBackground, 1000);
 
                 animate();
 
