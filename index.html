@@ -167,6 +167,57 @@
                 return bg
             }
 
+            var daysOfMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+            function getDayIndex(month, day) {
+                month -= 1;
+                day -= 1;
+                for (var i = 0; i < month; i++) {
+                    day += daysOfMonth[i];
+                }
+                return day;
+            }
+
+            function getSecondCount(h, m, s) {
+                return h*3600 + m*60 + s;
+            }
+
+            function getSunRiseSet(dt) {
+                var sunriseWinterDate = getDayIndex(1, 4);
+                var sunriseWinterTime = getSecondCount(7, 36, 2);
+
+                var sunriseSummerDate = getDayIndex(6, 14);
+                var sunriseSummerTime = getSecondCount(4, 45, 10);
+
+                var sunsetWinterDate = getDayIndex(12, 8);
+                var sunsetWinterTime = getSecondCount(16, 49, 18);
+
+                var sunsetSummerDate = getDayIndex(6, 28);
+                var sunsetSummerTime = getSecondCount(19, 47, 6);
+
+                var dayCount, maxDayCount;
+
+                var targetDate = getDayIndex(dt.getMonth()+1, dt.getDate());
+                if (targetDate >= sunriseWinterDate && targetDate < sunriseSummerDate) {
+                    dayCount = targetDate - sunriseWinterDate;
+                    maxDayCount = sunriseSummerDate - sunriseWinterDate;
+                } else {
+                    dayCount = targetDate > sunriseWinterDate ? (targetDate - sunriseSummerDate) : 364 - sunriseSummerDate + targetDate + 1;
+                    maxDayCount = 365 - (sunriseSummerDate - sunriseWinterDate);
+                }
+                var sunriseTime = sunriseWinterTime + (sunriseSummerTime - sunriseWinterTime)*1.0/maxDayCount*dayCount;
+
+                if (targetDate >= sunsetSummerDate && targetDate < sunsetWinterDate) {
+                    dayCount = targetDate - sunsetSummerDate;
+                    maxDayCount = sunsetWinterDate - sunsetSummerDate;
+                } else {
+                    dayCount = targetDate <= 364 ? 364 - targetDate : 364 - sunsetWinterDate + targetDate;
+                    maxDayCount = 365 - (sunsetWinterDate - sunsetSummerDate);
+                }
+                var sunsetTime = sunsetWinterTime + (sunsetSummerTime - sunsetWinterTime)*1.0/maxDayCount*dayCount;
+                return [sunriseTime, sunsetTime];
+            }
+
             function changeBackground() {
                 var now = new Date();
                 var nowHour = now.getHours();
@@ -175,31 +226,36 @@
                 // var nowMinutes = now.getSeconds();
                 var timePoint = nowHour * 60 + nowMinutes;
                 var grad1, grad2, point, bg;
-                if (timePoint >= 5*60+9 && timePoint < 5*60+39) {
+                var [sunriseTime, sunsetTime] = getSunRiseSet(now);
+                var sunrise = sunriseTime/60;
+                var sunset = sunsetTime/60;
+                var halfHour = 30.0;
+                console.log(sunrise/60, sunrise%60, sunset/60, sunset%60);
+                if (timePoint >= sunrise - halfHour && timePoint < sunrise) {
                     grad1 = night;
                     grad2 = dawn;
-                    point = (timePoint - (5*60+9))/30.0;
+                    point = (timePoint - (sunrise - halfHour))/halfHour;
                     bg = computeBackground(grad1, grad2, point);
-                } else if (timePoint >= 5*60+39 && timePoint < 6*60+9) {
+                } else if (timePoint >= sunrise && timePoint < sunrise + halfHour) {
                     grad1 = dawn;
                     grad2 = day;
-                    point = (timePoint - (5*60+39))/30.0;
+                    point = (timePoint - sunrise)/halfHour;
                     bg = computeBackground(grad1, grad2, point);
-                } else if (timePoint >= 6*60+9 && timePoint < 18*60+19) {
+                } else if (timePoint >= sunrise + halfHour && timePoint < sunset - halfHour) {
                     bg = "rgb(8, 140, 235)";
                     grad1 = day;
                     grad2 = day;
                     point = 0;
                     bg = computeBackground(grad1, grad2, point);
-                } else if (timePoint >= 18*60+19 && timePoint < 18*60+49) {
+                } else if (timePoint >= sunset - halfHour && timePoint < sunset) {
                     grad1 = day;
                     grad2 = dawn;
-                    point = (timePoint - (18*60+19))/30.0;
+                    point = (timePoint - (sunset - halfHour))/halfHour;
                     bg = computeBackground(grad1, grad2, point);
-                } else if (timePoint >= 18*60+49 && timePoint < 19*60+19) {
+                } else if (timePoint >= sunset && timePoint < sunset + halfHour) {
                     grad1 = dawn;
                     grad2 = night;
-                    point = (timePoint - (18*60+49))/30.0;
+                    point = (timePoint - sunset)/halfHour;
                     bg = computeBackground(grad1, grad2, point);
                 } else {
                     bg = "rgb(3, 0, 17)";
