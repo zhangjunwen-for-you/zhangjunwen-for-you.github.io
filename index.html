@@ -197,26 +197,43 @@
 
                 var dayCount, maxDayCount;
 
-                var targetDate = getDayIndex(dt.getMonth()+1, dt.getDate());
+                var usedDate = dt.getDate();
+                if (dt.getMonth() == 1 && usedDate == 29) {
+                    usedDate = 28;
+                }
+                var targetDate = getDayIndex(dt.getMonth()+1, usedDate);
+
+                var sunriseTime, sunsetTime;
+
                 if (targetDate >= sunriseWinterDate && targetDate < sunriseSummerDate) {
                     dayCount = targetDate - sunriseWinterDate;
                     maxDayCount = sunriseSummerDate - sunriseWinterDate;
+                    sunriseTime = sunriseWinterTime + (sunriseSummerTime - sunriseWinterTime)*1.0/maxDayCount*dayCount;
                 } else {
                     dayCount = targetDate > sunriseWinterDate ? (targetDate - sunriseSummerDate) : 364 - sunriseSummerDate + targetDate + 1;
                     maxDayCount = 365 - (sunriseSummerDate - sunriseWinterDate);
+                    sunriseTime = sunriseSummerTime + (sunriseWinterTime - sunriseSummerTime)*1.0/maxDayCount*dayCount;
                 }
-                var sunriseTime = sunriseWinterTime + (sunriseSummerTime - sunriseWinterTime)*1.0/maxDayCount*dayCount;
 
                 if (targetDate >= sunsetSummerDate && targetDate < sunsetWinterDate) {
                     dayCount = targetDate - sunsetSummerDate;
                     maxDayCount = sunsetWinterDate - sunsetSummerDate;
+                    sunsetTime = sunsetSummerTime + (sunsetWinterTime - sunsetSummerTime)*1.0/maxDayCount*dayCount;
                 } else {
                     dayCount = targetDate <= 364 ? 364 - targetDate : 364 - sunsetWinterDate + targetDate;
                     maxDayCount = 365 - (sunsetWinterDate - sunsetSummerDate);
+                    sunsetTime = sunsetWinterTime + (sunsetSummerTime - sunsetWinterTime)*1.0/maxDayCount*dayCount;
                 }
-                var sunsetTime = sunsetWinterTime + (sunsetSummerTime - sunsetWinterTime)*1.0/maxDayCount*dayCount;
+
+                console.log(sunriseSummerDate, sunriseWinterDate, targetDate);
+                console.log(sunsetSummerDate, sunsetWinterDate, targetDate);
+                console.log(dayCount, maxDayCount, dayCount*1.0/maxDayCount);
+                console.log(sunriseTime/60/60, sunriseTime/60%60, sunsetTime/60/60, sunsetTime/60%60);
                 return [sunriseTime, sunsetTime];
             }
+
+            var cacheDate = 0;
+            var sunrise, sunset;
 
             function changeBackground() {
                 var now = new Date();
@@ -226,11 +243,13 @@
                 // var nowMinutes = now.getSeconds();
                 var timePoint = nowHour * 60 + nowMinutes;
                 var grad1, grad2, point, bg;
-                var [sunriseTime, sunsetTime] = getSunRiseSet(now);
-                var sunrise = sunriseTime/60;
-                var sunset = sunsetTime/60;
+                if (cacheDate == 0 || cacheDate.getMonth() != now.getMonth() || cacheDate.getDate() != now.getDate()) {
+                    cacheDate = now;
+                    var [sunriseTime, sunsetTime] = getSunRiseSet(now);
+                    sunrise = sunriseTime/60;
+                    sunset = sunsetTime/60;
+                }
                 var halfHour = 30.0;
-                console.log(sunrise/60, sunrise%60, sunset/60, sunset%60);
                 if (timePoint >= sunrise - halfHour && timePoint < sunrise) {
                     grad1 = night;
                     grad2 = dawn;
