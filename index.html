@@ -44,7 +44,7 @@
 
 <body>
     <div id="mtext" class="thidden">
-        ♥
+        ❤
     </div>
     <canvas id="canvas"></canvas>
     <script type="text/javascript">
@@ -125,9 +125,9 @@
         var count = 0;
         var last_index = 0;
         function randomText(e) {
-            var choices = ["♥", "Z", "J", "W", "D", "K", "Q", "♥", "Z", "J", "W", "D", "K", "Q"];
+            var choices = ["❤", "Z", "J", "W", "D", "K", "Q", "❤", "Z", "J", "W", "D", "K", "Q"];
             if (count > 3) {
-                choices.push("D ♥ Z", "Z ♥ D");
+                choices.push("D ❤ Z", "Z ❤ D");
             }
             var index = Math.floor(Math.random() * choices.length);
             if (index == last_index) {
