@@ -1,367 +1,326 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <title>It's for you, ZJW</title>
-        <link rel="shortcut icon" href="https://img.icons8.com/color/96/like--v1.png">
-        <meta charset="utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <style>
-            html, body {
-                height: 100%;
-                width: 100%;
-                margin: 0;
-                padding: 0;
-            }
 
-            #mtext {
-                margin: auto;
-                position: absolute;
-                font-size: 88px;
-                z-index: 100;
-                width: 100%;
-                text-align: center;
-                top: 20%;
-            }
+<head>
+    <title>It's for you, ZJW</title>
+    <link rel="shortcut icon" href="https://img.icons8.com/color/96/like--v1.png">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        html,
+        body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
 
-            #mtext.thidden {
-                display: none;
-            }
+        #mtext {
+            margin: auto;
+            position: absolute;
+            font-size: 88px;
+            font-family: 'Times New Roman', Times, serif;
+            z-index: 100;
+            width: 100%;
+            text-align: center;
+            top: 20%;
+        }
 
-            canvas {
-                background: linear-gradient(
-                    to bottom,
+        #mtext.thidden {
+            display: none;
+        }
+
+        canvas {
+            background: linear-gradient(to bottom,
                     rgb(107, 48, 158),
                     rgb(145, 116, 1) 80%,
                     rgb(192, 92, 4));
-                position: absolute;
-                top: 0;
-            }
-        </style>
-    </head>
-    <body>
-        <div id="mtext" class="thidden">
-            ♥
-        </div>
-        <canvas id="canvas"></canvas>
-        <script type="text/javascript">
-            function Star(x,y,r,color) {
-                this.x = x;
-                this.y = y;
-                this.r = r;
-                this.rChange = 0.03;
-                this.color = color;
-            }
+            position: absolute;
+            top: 0;
+        }
+    </style>
+</head>
 
-            Star.prototype = {
-                constructor: Star,
-                render: function() {
-                    context.beginPath();
-                    context.arc(this.x, this.y, this.r, 0, 2*Math.PI, false);
-                    context.shadowBlur = 8;
-                    context.shadowColor = "white";
-                    context.fillStyle = this.color;
-                    context.fill();
-                },
-                update: function() {
-                    if (this.r > 2 || this.r < .8) {
-                        this.rChange = -this.rChange;
-                    }
-                    this.r += this.rChange;
+<body>
+    <div id="mtext" class="thidden">
+        ♥
+    </div>
+    <canvas id="canvas"></canvas>
+    <script type="text/javascript">
+        function Star(x, y, r, color) {
+            this.x = x;
+            this.y = y;
+            this.r = r;
+            this.rChange = 0.03;
+            this.color = color;
+        }
+
+        Star.prototype = {
+            constructor: Star,
+            render: function () {
+                context.beginPath();
+                context.arc(this.x, this.y, this.r, 0, 2 * Math.PI, false);
+                context.shadowBlur = 8;
+                context.shadowColor = "white";
+                context.fillStyle = this.color;
+                context.fill();
+            },
+            update: function () {
+                if (this.r > 2 || this.r < .8) {
+                    this.rChange = -this.rChange;
+                }
+                this.r += this.rChange;
+            }
+        }
+
+        var canvas = document.getElementById("canvas");
+        var context = canvas.getContext("2d");
+
+        var C_WIDTH = canvas.width = document.body.offsetWidth;
+        var C_HEIGHT = canvas.height = document.body.offsetHeight;
+
+        function randomColor() {
+            var arrColors = ["ffffff", "ffecd3", "bfcfff"];
+            return "#" + arrColors[Math.floor((Math.random() * 3))];
+        }
+
+        var arrStars = [];
+        for (i = 0; i < 202; i++) {
+            var randX = Math.floor((Math.random() * C_WIDTH) + 1);
+            var randY = Math.floor((Math.random() * C_HEIGHT) + 1);
+            var randR = Math.random() * 1.3 + .5;
+
+            var star = new Star(randX, randY, randR, randomColor());
+            arrStars.push(star);
+        }
+        for (i = 0; i < 520; i++) {
+            var randX = Math.floor((Math.random() * C_WIDTH) + 1);
+            var randY = Math.floor((Math.random() * C_HEIGHT) + 1);
+            var randR = Math.random() * 0.5 + .3;
+
+            var star = new Star(randX, randY, randR, randomColor());
+            arrStars.push(star);
+        }
+        for (i = 0; i < 1314; i++) {
+            var randX = Math.floor((Math.random() * C_WIDTH) + 1);
+            var randY = Math.floor((Math.random() * C_HEIGHT) + 1);
+            var randR = Math.random() * 0.3 + .1;
+
+            var star = new Star(randX, randY, randR, randomColor());
+            arrStars.push(star);
+        }
+
+        function animate() {
+            for (var i = 0; i < arrStars.length; i++) {
+                arrStars[i].update();
+            }
+            context.clearRect(0, 0, C_WIDTH, C_HEIGHT);
+            for (var i = 0; i < arrStars.length; i++) {
+                arrStars[i].render();
+            }
+            requestAnimationFrame(animate);
+        }
+
+        var count = 0;
+        var last_index = 0;
+        function randomText(e) {
+            var choices = ["♥", "Z", "J", "W", "D", "K", "Q", "♥", "Z", "J", "W", "D", "K", "Q"];
+            if (count > 3) {
+                choices.push("D ♥ Z", "Z ♥ D");
+            }
+            var index = Math.floor(Math.random() * choices.length);
+            if (index == last_index) {
+                index++;
+                last_index = index;
+            }
+            mtext.innerText = choices[index];
+            var colorRed = Math.floor(Math.random() * 200 + 1);
+            var colorGreen = Math.floor(Math.random() * colorRed + 1);
+            var colorBlue = Math.floor(Math.random() * 30 + colorRed);
+            mtext.style.color = "rgb(" + colorRed + ", " + colorGreen + ", " + Math.min(colorBlue, 255) + ")";
+            mtext.classList.remove("thidden");
+            count++;
+            return false;
+        }
+
+        function hideText(e) {
+            mtext.classList.add("thidden");
+            return false;
+        }
+
+        // see: https://gist.github.com/ruiokada/b28076d4911820ddcbbc
+        function getSunRiseSetV2(d, lat, lng, tz) {
+            var radians = Math.PI / 180.0;
+            var degrees = 180.0 / Math.PI;
+
+            var a = Math.floor((14 - (d.getMonth() + 1.0)) / 12)
+            var y = d.getFullYear() + 4800 - a;
+            var m = (d.getMonth() + 1) + 12 * a - 3;
+            var j_day = d.getDate() + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
+            var n_star = j_day - 2451545.0009 - lng / 360.0;
+            var n = Math.floor(n_star + 0.5);
+            var solar_noon = 2451545.0009 - lng / 360.0 + n;
+            var M = 356.0470 + 0.9856002585 * n;
+            var C = 1.9148 * Math.sin(M * radians) + 0.02 * Math.sin(2 * M * radians) + 0.0003 * Math.sin(3 * M * radians);
+            var L = (M + 102.9372 + C + 180) % 360;
+            var j_transit = solar_noon + 0.0053 * Math.sin(M * radians) - 0.0069 * Math.sin(2 * L * radians);
+            var D = Math.asin(Math.sin(L * radians) * Math.sin(23.45 * radians)) * degrees;
+            var cos_omega = (Math.sin(-0.83 * radians) - Math.sin(lat * radians) * Math.sin(D * radians)) / (Math.cos(lat * radians) * Math.cos(D * radians));
+
+            // sun never rises
+            if (cos_omega > 1)
+                return [null, -1];
+
+            // sun never sets
+            if (cos_omega < -1)
+                return [-1, null];
+
+            // get Julian dates of sunrise/sunset
+            var omega = Math.acos(cos_omega) * degrees;
+            var j_set = j_transit + omega / 360.0;
+            var j_rise = j_transit - omega / 360.0;
+
+            /*
+            * get sunrise and sunset times in UTC
+            * Check section "Finding Julian date given Julian day number and time of
+            *  day" on wikipedia for where the extra "+ 12" comes from.
+            */
+            var utc_time_set = 24 * (j_set - j_day) + 12;
+            var utc_time_rise = 24 * (j_rise - j_day) + 12;
+            var tz_offset = tz === undefined ? -1 * d.getTimezoneOffset() / 60 : tz;
+            var local_rise = (utc_time_rise + tz_offset) % 24;
+            var local_set = (utc_time_set + tz_offset) % 24;
+            local_rise *= 3600;
+            local_set *= 3600;
+            console.log(tz_offset, ':', local_rise / 60 / 60, local_rise / 60 % 60, local_set / 60 / 60, local_set / 60 % 60);
+            return [local_rise, local_set];
+        }
+
+        var day = [[8, 140, 235], [8, 140, 235], [8, 140, 235]];
+        var dawn = [[107, 48, 158], [145, 116, 1], [192, 92, 4]];
+        var night = [[3, 0, 17], [3, 0, 17], [3, 0, 17]];
+
+
+        function BackgroundConfig(secs, rgbList, gradientPointList) {
+            this.secs = secs;
+            this.rgbList = rgbList;
+            this.gradientPointList = gradientPointList; // 长度必须是 rgbList.length - 2
+        }
+
+        var cacheDate = 0;
+        var sunriseSecond, sunsetSecond;
+        var backgroundConfigs = [];
+
+        function refreshCacheData(now) {
+            if (cacheDate == 0 || cacheDate.getMonth() != now.getMonth() || cacheDate.getDate() != now.getDate()) {
+                cacheDate = now;
+                var [sunriseTime, sunsetTime] = getSunRiseSetV2(now, 39.9, 116.5);
+                sunriseSecond = sunriseTime;
+                sunsetSecond = sunsetTime;
+
+                var harfHour = 30 * 60;
+
+                backgroundConfigs = [
+                    new BackgroundConfig(0, night, [80]),
+                    new BackgroundConfig(sunriseSecond - harfHour, night, [80]),
+                    new BackgroundConfig(sunriseSecond, dawn, [80]),
+                    new BackgroundConfig(sunriseSecond + harfHour, day, [80]),
+                    new BackgroundConfig(sunsetSecond - harfHour, day, [80]),
+                    new BackgroundConfig(sunsetSecond, dawn, [80]),
+                    new BackgroundConfig(sunsetSecond + harfHour, night, [80]),
+                    new BackgroundConfig(24 * 3600, night, [80]),
+                ];
+            }
+        }
+
+        function computeBackgroundV2(config1, config2, curSecs) {
+            var point = (curSecs * 1.0 - config1.secs) / (config2.secs * 1.0 - config1.secs);
+            var grad1 = config1.rgbList;
+            var grad2 = config2.rgbList;
+            var gradPt1 = config1.gradientPointList;
+            var gradPt2 = config2.gradientPointList;
+            var bg = "linear-gradient(to bottom, ";
+            for (var i = 0; i < grad1.length; i++) {
+                var red = Math.floor(grad1[i][0] + (grad2[i][0] - grad1[i][0]) * point);
+                var green = Math.floor(grad1[i][1] + (grad2[i][1] - grad1[i][1]) * point);
+                var blue = Math.floor(grad1[i][2] + (grad2[i][2] - grad1[i][2]) * point);
+                bg += "rgb(" + red + ", " + green + ", " + blue + ")";
+                if (i > 0 && i < grad1.length - 1) {
+                    bg += " " + Math.floor((gradPt1[i - 1] + gradPt2[i - 1]) / 2) + "%";
+                }
+                if (i < grad1.length - 1) {
+                    bg += ", ";
                 }
             }
+            bg += ")";
+            return bg
+        }
 
-            var canvas = document.getElementById("canvas");
-            var context = canvas.getContext("2d");
-
-            var C_WIDTH = canvas.width = document.body.offsetWidth;
-            var C_HEIGHT = canvas.height = document.body.offsetHeight;
-
-            function randomColor(){
-                    var arrColors = ["ffffff", "ffecd3" , "bfcfff"];
-                    return "#"+arrColors[Math.floor((Math.random()*3))];
-            }
-
-            var arrStars = [];
-            for(i = 0; i < 202; i++){
-                var randX = Math.floor((Math.random()*C_WIDTH)+1);
-                var randY = Math.floor((Math.random()*C_HEIGHT)+1);
-                var randR = Math.random() * 1.3 + .5;
-
-                var star = new Star(randX, randY, randR, randomColor());
-                arrStars.push(star);
-            }
-            for(i = 0; i < 520; i++){
-                var randX = Math.floor((Math.random()*C_WIDTH)+1);
-                var randY = Math.floor((Math.random()*C_HEIGHT)+1);
-                var randR = Math.random() * 0.5 + .3;
-
-                var star = new Star(randX, randY, randR, randomColor());
-                arrStars.push(star);
-            }
-            for(i = 0; i < 1314; i++){
-                var randX = Math.floor((Math.random()*C_WIDTH)+1);
-                var randY = Math.floor((Math.random()*C_HEIGHT)+1);
-                var randR = Math.random() * 0.3 + .1;
-
-                var star = new Star(randX, randY, randR, randomColor());
-                arrStars.push(star);
-            }
-
-            function animate(){
-                for(var i = 0; i < arrStars.length; i++) {
-                    arrStars[i].update();
+        function doChangeBackgroundV2(now) {
+            var curSecs = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+            var config1 = backgroundConfigs[0];
+            var config2 = backgroundConfigs[1];
+            for (var i = 1; i < backgroundConfigs.length - 1; i++) {
+                if (curSecs >= backgroundConfigs[i].secs) {
+                    config1 = backgroundConfigs[i];
+                    config2 = backgroundConfigs[i + 1];
+                } else {
+                    break;
                 }
-                context.clearRect(0, 0, C_WIDTH, C_HEIGHT);
-                for(var i = 0; i < arrStars.length; i++) {
-                    arrStars[i].render();
-                }
-                requestAnimationFrame(animate);
             }
+            var bg = computeBackgroundV2(config1, config2, curSecs);
+            // console.log(now, bg);
+            canvas.style.background = bg;
+        }
 
-            var count = 0;
-            var last_index = 0;
-            function randomText(e) {
-                var choices = ["♥", "Z", "J", "W", "D", "K", "Q", "♥", "Z", "J", "W", "D", "K", "Q"];
-                if (count > 3) {
-                    choices.push("D ♥ Z", "Z ♥ D");
-                }
-                var index = Math.floor(Math.random() * choices.length);
-                if (index == last_index) {
-                    index++;
-                    last_index = index;
-                }
-                mtext.innerText = choices[index];
-                var colorRed = Math.floor(Math.random()*200 + 1);
-                var colorGreen = Math.floor(Math.random()*colorRed + 1);
-                var colorBlue = Math.floor(Math.random()*30 + colorRed);
-                mtext.style.color = "rgb("+colorRed + ", " + colorGreen + ", " + Math.min(colorBlue, 255) + ")";
-                mtext.classList.remove("thidden");
-                count++;
+        function changeBackgroundV2() {
+            var now = new Date();
+            refreshCacheData(now);
+            doChangeBackgroundV2(now);
+        }
+
+        function simulate() {
+            var now = new Date();
+            var simulateSec = 0;
+            setInterval(function () {
+                simulateSec = (simulateSec + 30) % (24 * 3600);
+                var dt = new Date(
+                    now.getFullYear(), now.getMonth(), now.getDate(),
+                    simulateSec / 3600, simulateSec % 3600 / 60, simulateSec % 60);
+                doChangeBackgroundV2(dt);
+            }, 10);
+        }
+
+        function startMain() {
+            changeBackgroundV2();
+
+            // setTimeout(simulate, 5000);
+            setInterval(changeBackgroundV2, 1000);
+
+            animate();
+
+            document.oncontextmenu = (e) => {
+                e.preventDefault()
+                return false;
+            }
+            canvas.oncontextmenu = (e) => {
+                e.preventDefault()
+                return false;
+            }
+            mtext.oncontextmenu = (e) => {
+                e.preventDefault()
                 return false;
             }
 
-            function hideText(e) {
-                mtext.classList.add("thidden");
-                return false;
-            }
+            canvas.onmousedown = randomText;
+            canvas.onmouseup = hideText;
+            canvas.ontouchstart = randomText;
+            canvas.ontouchend = hideText;
+        }
 
-            var day = [[8, 140, 235], [8, 140, 235], [8, 140, 235]];
-            var dawn = [[107, 48, 158], [145, 116, 1], [192, 92, 4]];
-            var night = [[3, 0, 17], [3, 0, 17], [3, 0, 17]];
-            function computeBackground(grad1, grad2, point) {
-                var bg = "linear-gradient(to bottom, ";
-                for (var i = 0; i < 3; i++) {
-                    var red = Math.floor(grad1[i][0] + (grad2[i][0] - grad1[i][0])*point);
-                    var green = Math.floor(grad1[i][1] + (grad2[i][1] - grad1[i][1])*point);
-                    var blue = Math.floor(grad1[i][2] + (grad2[i][2] - grad1[i][2])*point);
-                    bg += "rgb("+red+", "+green+", "+blue+")";
-                    if (i == 1) {
-                        bg += " 80%";
-                    }
-                    if (i <= 1) {
-                        bg += ", ";
-                    }
-                }
-                bg += ")";
-                return bg
-            }
+        startMain();
+    </script>
+</body>
 
-            var daysOfMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-
-            function getDayIndex(month, day) {
-                month -= 1;
-                day -= 1;
-                for (var i = 0; i < month; i++) {
-                    day += daysOfMonth[i];
-                }
-                return day;
-            }
-
-            function getSecondCount(h, m, s) {
-                return h*3600 + m*60 + s;
-            }
-
-            function getSunRiseSet(dt) {
-                var sunriseWinterDate = getDayIndex(1, 4);
-                var sunriseWinterTime = getSecondCount(7, 36, 2);
-
-                var sunriseSummerDate = getDayIndex(6, 14);
-                var sunriseSummerTime = getSecondCount(4, 45, 10);
-
-                var sunsetWinterDate = getDayIndex(12, 8);
-                var sunsetWinterTime = getSecondCount(16, 49, 18);
-
-                var sunsetSummerDate = getDayIndex(6, 28);
-                var sunsetSummerTime = getSecondCount(19, 47, 6);
-
-                var dayCount, maxDayCount;
-
-                var usedDate = dt.getDate();
-                if (dt.getMonth() == 1 && usedDate == 29) {
-                    usedDate = 28;
-                }
-                var targetDate = getDayIndex(dt.getMonth()+1, usedDate);
-
-                var sunriseTime, sunsetTime;
-
-                if (targetDate >= sunriseWinterDate && targetDate < sunriseSummerDate) {
-                    dayCount = targetDate - sunriseWinterDate;
-                    maxDayCount = sunriseSummerDate - sunriseWinterDate;
-                    sunriseTime = sunriseWinterTime + (sunriseSummerTime - sunriseWinterTime)*1.0/maxDayCount*dayCount;
-                } else {
-                    dayCount = targetDate > sunriseWinterDate ? (targetDate - sunriseSummerDate) : 364 - sunriseSummerDate + targetDate + 1;
-                    maxDayCount = 365 - (sunriseSummerDate - sunriseWinterDate);
-                    sunriseTime = sunriseSummerTime + (sunriseWinterTime - sunriseSummerTime)*1.0/maxDayCount*dayCount;
-                }
-
-                if (targetDate >= sunsetSummerDate && targetDate < sunsetWinterDate) {
-                    dayCount = targetDate - sunsetSummerDate;
-                    maxDayCount = sunsetWinterDate - sunsetSummerDate;
-                    sunsetTime = sunsetSummerTime + (sunsetWinterTime - sunsetSummerTime)*1.0/maxDayCount*dayCount;
-                } else {
-                    dayCount = targetDate <= 364 ? 364 - targetDate : 364 - sunsetWinterDate + targetDate;
-                    maxDayCount = 365 - (sunsetWinterDate - sunsetSummerDate);
-                    sunsetTime = sunsetWinterTime + (sunsetSummerTime - sunsetWinterTime)*1.0/maxDayCount*dayCount;
-                }
-
-                console.log(sunriseSummerDate, sunriseWinterDate, targetDate);
-                console.log(sunsetSummerDate, sunsetWinterDate, targetDate);
-                console.log(dayCount, maxDayCount, dayCount*1.0/maxDayCount);
-                console.log(sunriseTime/60/60, sunriseTime/60%60, sunsetTime/60/60, sunsetTime/60%60);
-                return [sunriseTime, sunsetTime];
-            }
-
-            // see: https://gist.github.com/ruiokada/b28076d4911820ddcbbc
-            function getSunRiseSetV2(d, lat, lng, tz) {
-                var radians = Math.PI / 180.0;
-                var degrees = 180.0 / Math.PI;
-
-                var a = Math.floor((14 - (d.getMonth() + 1.0)) / 12)
-                var y = d.getFullYear() + 4800 - a;
-                var m = (d.getMonth() + 1) + 12 * a - 3;
-                var j_day = d.getDate() + Math.floor((153 * m + 2)/5) + 365 * y + Math.floor(y/4) - Math.floor(y/100) + Math.floor(y/400) - 32045;
-                var n_star = j_day - 2451545.0009 - lng / 360.0;
-                var n = Math.floor(n_star + 0.5);
-                var solar_noon = 2451545.0009 - lng / 360.0 + n;
-                var M = 356.0470 + 0.9856002585 * n;
-                var C = 1.9148 * Math.sin( M * radians ) + 0.02 * Math.sin( 2 * M * radians ) + 0.0003 * Math.sin( 3 * M * radians );
-                var L = ( M + 102.9372 + C + 180 ) % 360;
-                var j_transit = solar_noon + 0.0053 * Math.sin( M * radians) - 0.0069 * Math.sin( 2 * L * radians );
-                var D = Math.asin( Math.sin( L * radians ) * Math.sin( 23.45 * radians ) ) * degrees;
-                var cos_omega = ( Math.sin(-0.83 * radians) - Math.sin( lat * radians ) * Math.sin( D * radians ) ) / ( Math.cos( lat * radians ) * Math.cos( D * radians ) );
-
-                // sun never rises
-                if( cos_omega > 1)
-                    return [null, -1];
-
-                // sun never sets
-                if( cos_omega < -1 )
-                    return [-1, null];
-
-                // get Julian dates of sunrise/sunset
-                var omega = Math.acos( cos_omega ) * degrees;
-                var j_set = j_transit + omega / 360.0;
-                var j_rise = j_transit - omega / 360.0;
-
-                /*
-                * get sunrise and sunset times in UTC
-                * Check section "Finding Julian date given Julian day number and time of
-                *  day" on wikipedia for where the extra "+ 12" comes from.
-                */
-                var utc_time_set = 24 * (j_set - j_day) + 12;
-                var utc_time_rise = 24 * (j_rise - j_day) + 12;
-                var tz_offset = tz === undefined ? -1 * d.getTimezoneOffset() / 60 : tz;
-                var local_rise = (utc_time_rise + tz_offset) % 24;
-                var local_set = (utc_time_set + tz_offset) % 24;
-                local_rise *= 3600;
-                local_set *= 3600;
-                console.log(tz_offset, ':', local_rise/60/60, local_rise/60%60, local_set/60/60, local_set/60%60);
-                return [local_rise, local_set];
-            }
-
-            var cacheDate = 0;
-            var sunrise, sunset;
-
-            function changeBackground() {
-                var now = new Date();
-                var nowHour = now.getHours();
-                var nowMinutes = now.getMinutes();
-                // var nowHour = now.getMinutes()%24+3;
-                // var nowMinutes = now.getSeconds();
-                var timePoint = nowHour * 60 + nowMinutes;
-                var grad1, grad2, point, bg;
-                if (cacheDate == 0 || cacheDate.getMonth() != now.getMonth() || cacheDate.getDate() != now.getDate()) {
-                    cacheDate = now;
-                    // var [sunriseTime, sunsetTime] = getSunRiseSet(now);
-                    var [sunriseTime, sunsetTime] = getSunRiseSetV2(now, 39.9, 116.5);
-                    sunrise = sunriseTime/60;
-                    sunset = sunsetTime/60;
-                }
-                var halfHour = 30.0;
-                if (timePoint >= sunrise - halfHour && timePoint < sunrise) {
-                    grad1 = night;
-                    grad2 = dawn;
-                    point = (timePoint - (sunrise - halfHour))/halfHour;
-                    bg = computeBackground(grad1, grad2, point);
-                } else if (timePoint >= sunrise && timePoint < sunrise + halfHour) {
-                    grad1 = dawn;
-                    grad2 = day;
-                    point = (timePoint - sunrise)/halfHour;
-                    bg = computeBackground(grad1, grad2, point);
-                } else if (timePoint >= sunrise + halfHour && timePoint < sunset - halfHour) {
-                    bg = "rgb(8, 140, 235)";
-                    grad1 = day;
-                    grad2 = day;
-                    point = 0;
-                    bg = computeBackground(grad1, grad2, point);
-                } else if (timePoint >= sunset - halfHour && timePoint < sunset) {
-                    grad1 = day;
-                    grad2 = dawn;
-                    point = (timePoint - (sunset - halfHour))/halfHour;
-                    bg = computeBackground(grad1, grad2, point);
-                } else if (timePoint >= sunset && timePoint < sunset + halfHour) {
-                    grad1 = dawn;
-                    grad2 = night;
-                    point = (timePoint - sunset)/halfHour;
-                    bg = computeBackground(grad1, grad2, point);
-                } else {
-                    bg = "rgb(3, 0, 17)";
-                    grad1 = night;
-                    grad2 = night;
-                    point = 0;
-                    bg = computeBackground(grad1, grad2, point);
-                }
-                // console.log(nowHour, nowMinutes, timePoint, bg);
-                canvas.style.background = bg;
-            }
-
-            function start_main() {
-                changeBackground();
-                setInterval(changeBackground, 1000);
-
-                animate();
-
-                document.oncontextmenu = (e) => {
-                    e.preventDefault()
-                    return false;
-                }
-                canvas.oncontextmenu = (e) => {
-                    e.preventDefault()
-                    return false;
-                }
-                mtext.oncontextmenu = (e) => {
-                    e.preventDefault()
-                    return false;
-                }
-
-                canvas.onmousedown = randomText;
-                canvas.onmouseup = hideText;
-                canvas.ontouchstart = randomText;
-                canvas.ontouchend = hideText;
-            }
-
-            start_main();
-        </script>
-    </body>
 </html>
