@@ -197,9 +197,11 @@
             return [local_rise, local_set];
         }
 
-        var day = [[8, 140, 235], [8, 140, 235], [8, 140, 235]];
-        var dawn = [[107, 48, 158], [145, 116, 1], [192, 92, 4]];
-        var night = [[3, 0, 17], [3, 0, 17], [3, 0, 17]];
+        var day = [[78, 120, 196], [78, 120, 196], [78, 120, 196], [78, 120, 196], [78, 120, 196], [78, 120, 196]];
+        var day_dawn = [[103, 121, 144], [115, 131, 154], [129, 145, 160], [147, 159, 169], [170, 172, 169], [189, 169, 145]];
+        var dawn = [[134, 145, 160], [195, 194, 180], [245, 223, 177], [249, 212, 143], [244, 178, 109], [239, 127, 75]];
+        var dawn_night = [[8, 28, 65], [31, 51, 114], [50, 73, 146], [115, 123, 196], [172, 161, 201], [204, 189, 198]];
+        var night = [[12, 20, 50], [12, 20, 50], [12, 20, 50], [12, 20, 50], [12, 20, 50], [12, 20, 50]];
 
 
         function BackgroundConfig(secs, rgbList, gradientPointList) {
@@ -219,17 +221,25 @@
                 sunriseSecond = sunriseTime;
                 sunsetSecond = sunsetTime;
 
-                var harfHour = 30 * 60;
+                var normalToChange = 30 * 60;
+                var midToChange = 15 * 60;
 
                 backgroundConfigs = [
-                    new BackgroundConfig(0, night, [80]),
-                    new BackgroundConfig(sunriseSecond - harfHour, night, [80]),
-                    new BackgroundConfig(sunriseSecond, dawn, [80]),
-                    new BackgroundConfig(sunriseSecond + harfHour, day, [80]),
-                    new BackgroundConfig(sunsetSecond - harfHour, day, [80]),
-                    new BackgroundConfig(sunsetSecond, dawn, [80]),
-                    new BackgroundConfig(sunsetSecond + harfHour, night, [80]),
-                    new BackgroundConfig(24 * 3600, night, [80]),
+                    new BackgroundConfig(0, night, [20, 40, 60, 80]),
+
+                    new BackgroundConfig(sunriseSecond - normalToChange, night, [20, 40, 60, 80]),
+                    new BackgroundConfig(sunriseSecond - midToChange, dawn_night, [28, 45, 75, 90]),
+                    new BackgroundConfig(sunriseSecond, dawn, [46, 72, 86, 92]),
+                    new BackgroundConfig(sunriseSecond + midToChange, day_dawn, [20, 40, 60, 80]),
+                    new BackgroundConfig(sunriseSecond + normalToChange, day, [20, 40, 60, 80]),
+
+                    new BackgroundConfig(sunsetSecond - normalToChange, day, [20, 40, 60, 80]),
+                    new BackgroundConfig(sunsetSecond - midToChange, day_dawn, [20, 40, 60, 80]),
+                    new BackgroundConfig(sunsetSecond, dawn, [46, 72, 86, 92]),
+                    new BackgroundConfig(sunsetSecond + midToChange, dawn_night, [28, 45, 75, 90]),
+                    new BackgroundConfig(sunsetSecond + normalToChange, night, [20, 40, 60, 80]),
+
+                    new BackgroundConfig(24 * 3600, night, [20, 40, 60, 80]),
                 ];
             }
         }
@@ -247,7 +257,7 @@
                 var blue = Math.floor(grad1[i][2] + (grad2[i][2] - grad1[i][2]) * point);
                 bg += "rgb(" + red + ", " + green + ", " + blue + ")";
                 if (i > 0 && i < grad1.length - 1) {
-                    bg += " " + Math.floor((gradPt1[i - 1] + gradPt2[i - 1]) / 2) + "%";
+                    bg += " " + Math.floor(gradPt1[i - 1] + (gradPt2[i - 1] - gradPt1[i - 1]) * point) + "%";
                 }
                 if (i < grad1.length - 1) {
                     bg += ", ";
@@ -257,7 +267,7 @@
             return bg
         }
 
-        function doChangeBackgroundV2(now) {
+        function doChangeBackgroundV2(now, debug) {
             var curSecs = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
             var config1 = backgroundConfigs[0];
             var config2 = backgroundConfigs[1];
@@ -270,33 +280,42 @@
                 }
             }
             var bg = computeBackgroundV2(config1, config2, curSecs);
-            // console.log(now, bg);
+            if (debug) {
+                console.log(now, bg);
+            }
             canvas.style.background = bg;
         }
 
         function changeBackgroundV2() {
             var now = new Date();
             refreshCacheData(now);
-            doChangeBackgroundV2(now);
+            doChangeBackgroundV2(now, false);
         }
 
         function simulate() {
             var now = new Date();
             var simulateSec = 0;
+            var [sunriseTime, sunsetTime] = getSunRiseSetV2(now, 39.9, 116.5);
             setInterval(function () {
-                simulateSec = (simulateSec + 30) % (24 * 3600);
+                if (simulateSec > sunsetSecond + 2000 || simulateSec < sunriseSecond - 2000) {
+                    simulateSec = sunriseSecond - 2000;
+                } else if (simulateSec > sunriseSecond + 2000 && simulateSec < sunsetSecond - 2000) {
+                    simulateSec = sunsetSecond - 2000;
+                } else {
+                    simulateSec = (simulateSec + 30) % (24 * 3600);
+                }
                 var dt = new Date(
                     now.getFullYear(), now.getMonth(), now.getDate(),
                     simulateSec / 3600, simulateSec % 3600 / 60, simulateSec % 60);
-                doChangeBackgroundV2(dt);
-            }, 10);
+                doChangeBackgroundV2(dt, true);
+            }, 200);
         }
 
         function startMain() {
             changeBackgroundV2();
 
-            // setTimeout(simulate, 5000);
-            setInterval(changeBackgroundV2, 1000);
+            setTimeout(simulate, 2000);
+            // setInterval(changeBackgroundV2, 1000);
 
             animate();
 
