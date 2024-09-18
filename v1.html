@@ -14,12 +14,6 @@
             width: 100%;
             margin: 0;
             padding: 0;
-            position: absolute;
-            top: 0;
-        }
-
-        * {
-            overflow: hidden;
         }
 
         #mtext {
@@ -37,10 +31,9 @@
             display: none;
         }
 
-        #canvas_bg, #canvas_bg2{
+        #canvas_bg {
             position: absolute;
             top: 0;
-            left: 0;
         }
 
         #canvas {
@@ -57,26 +50,22 @@
     </div>
     <canvas id="canvas" style="z-index: 1000;"></canvas>
     <canvas id="canvas_bg"></canvas>
-    <canvas id="canvas_bg2"></canvas>
     <script type="text/javascript">
-        var globalNowSec = 0;
-        function Star(ctxList, x, y, r, color, twinking) {
-            this.ctxList = ctxList;
+        function Star(ctx, x, y, r, color, shining) {
+            this.ctx = ctx;
             this.x = x;
             this.y = y;
 
-            this.rawX = x;
-
-            if (twinking) {
+            if (shining) {
                 this.rMax = r;
-                this.rMin = r*(0.2 + Math.random() * 0.4);
+                this.rMin = r*(0.5 + Math.random() * 0.3);
                 this.r = this.rMin + Math.random() * (this.rMax - this.rMin);
             } else {
                 this.r = r;
             }
-            this.rChange = 0.03*(Math.random()*0.2 + 0.9);
+            this.rChange = 0.03;
             this.color = color;
-            this.shouldTwinking = twinking;
+            this.shouldShining = shining;
 
             this.rendered = false;
         }
@@ -84,41 +73,34 @@
         Star.prototype = {
             constructor: Star,
             render: function () {
-                if (!this.shouldTwinking && this.rendered) {
+                if (!this.shouldShining && this.rendered) {
                     return;
                 }
                 if (!this.rendered) {
                     this.rendered = true;
                 }
-                for(var ind in this.ctxList) {
-                    this.ctxList[ind].beginPath();
-                    this.ctxList[ind].arc(this.x, this.y, this.r, 0, 2 * Math.PI, false);
-                    this.ctxList[ind].shadowBlur = 8;
-                    this.ctxList[ind].shadowColor = "white";
-                    this.ctxList[ind].fillStyle = this.color;
-                    this.ctxList[ind].fill();
-                }
+                this.ctx.beginPath();
+                this.ctx.arc(this.x, this.y, this.r, 0, 2 * Math.PI, false);
+                this.ctx.shadowBlur = 8;
+                this.ctx.shadowColor = "white";
+                this.ctx.fillStyle = this.color;
+                this.ctx.fill();
             },
             update: function () {
-                if (!this.shouldTwinking) {
+                if (!this.shouldShining) {
                     return;
                 }
                 if (this.r > this.rMax || this.r < this.rMin) {
                     this.rChange = -this.rChange;
                 }
-                this.r += this.rChange*(Math.random()*0.2+0.8);
-
-                var offset = Math.floor(C_WIDTH*(globalNowSec/24/3600));
-                this.x = (this.rawX + offset)%C_WIDTH;
+                this.r += this.rChange;
             }
         }
 
         var canvasBg = document.getElementById("canvas_bg");
-        var canvasBg2 = document.getElementById("canvas_bg2");
         var canvas = document.getElementById("canvas");
 
         var contextBg = canvasBg.getContext("2d");
-        var contextBg2 = canvasBg2.getContext("2d");
         var context = canvas.getContext("2d");
 
         var C_WIDTH = document.body.offsetWidth;
@@ -126,8 +108,6 @@
 
         canvasBg.width = C_WIDTH;
         canvasBg.height = C_HEIGHT;
-        canvasBg2.width = C_WIDTH;
-        canvasBg2.height = C_HEIGHT;
         canvas.width = C_WIDTH;
         canvas.height = C_HEIGHT;
 
@@ -142,7 +122,7 @@
             var randY = Math.floor((Math.random() * C_HEIGHT) + 1);
             var randR = Math.random() * 1.3 + .8;
 
-            var star = new Star([context], randX, randY, randR, randomColor(), true);
+            var star = new Star(context, randX, randY, randR, randomColor(), true);
             arrStars.push(star);
         }
         for (i = 0; i < 520; i++) {
@@ -150,7 +130,7 @@
             var randY = Math.floor((Math.random() * C_HEIGHT) + 1);
             var randR = Math.random() * 0.5 + .3;
 
-            var star = new Star([contextBg, contextBg2], randX, randY, randR, randomColor(), false);
+            var star = new Star(contextBg, randX, randY, randR, randomColor(), false);
             arrStars.push(star);
         }
         for (i = 0; i < 1314; i++) {
@@ -158,7 +138,7 @@
             var randY = Math.floor((Math.random() * C_HEIGHT) + 1);
             var randR = Math.random() * 0.3 + .1;
 
-            var star = new Star([contextBg, contextBg2], randX, randY, randR, randomColor(), false);
+            var star = new Star(contextBg, randX, randY, randR, randomColor(), false);
             arrStars.push(star);
         }
 
@@ -269,11 +249,15 @@
         var sunriseSecond, sunsetSecond;
         var backgroundConfigs = [];
 
-        function refreshCacheData(now, sunriseTime, sunsetTime, normalToChange, midToChange) {
+        function refreshCacheData(now) {
             if (cacheDate == 0 || cacheDate.getMonth() != now.getMonth() || cacheDate.getDate() != now.getDate()) {
                 cacheDate = now;
+                var [sunriseTime, sunsetTime] = getSunRiseSetV2(now, 39.9, 116.5);
                 sunriseSecond = sunriseTime;
                 sunsetSecond = sunsetTime;
+
+                var normalToChange = 30 * 60;
+                var midToChange = 15 * 60;
 
                 backgroundConfigs = [
                     new BackgroundConfig(0, night, [20, 40, 60, 80]),
@@ -334,33 +318,27 @@
             if (debug) {
                 console.log(now, bg);
             }
-
             canvasBg.style.background = bg;
-            canvasBg2.style.background = bg;
-            globalNowSec = curSecs;
-
-            var offset = Math.floor(C_WIDTH*(globalNowSec/24/3600));
-            canvasBg.style.left = (offset-1) + "px";
-            canvasBg2.style.left = (-C_WIDTH + offset) + "px";
         }
 
         function changeBackgroundV2() {
             var now = new Date();
-            var [sunriseTime, sunsetTime] = getSunRiseSetV2(now, 39.9, 116.5);
-            refreshCacheData(now, sunriseTime, sunsetTime, 30*60, 15*60);
+            refreshCacheData(now);
             doChangeBackgroundV2(now, false);
         }
 
         function simulate() {
-            var sunriseTime = 6*3600;
-            var sunsetTime = 18*3600;
             var now = new Date();
-            cacheDate = 0;
-            refreshCacheData(now, sunriseTime, sunsetTime, 4*3600, 2*3600);
-
             var simulateSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+            var [sunriseTime, sunsetTime] = getSunRiseSetV2(now, 39.9, 116.5);
             setInterval(function () {
-                simulateSec = (simulateSec + 120) % (24 * 3600);
+                if (simulateSec > sunsetTime + 2000 || simulateSec < sunriseTime - 2000) {
+                    simulateSec = sunriseTime - 2000;
+                } else if (simulateSec > sunriseTime + 2000 && simulateSec < sunsetTime - 2000) {
+                    simulateSec = sunsetTime - 2000;
+                } else {
+                    simulateSec = (simulateSec + 15) % (24 * 3600);
+                }
                 var dt = new Date(
                     now.getFullYear(), now.getMonth(), now.getDate(),
                     simulateSec / 3600, simulateSec % 3600 / 60, simulateSec % 60);

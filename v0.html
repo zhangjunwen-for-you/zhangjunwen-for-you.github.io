@@ -29,11 +29,6 @@
             }
 
             canvas {
-                background: linear-gradient(
-                    to bottom,
-                    rgb(107, 48, 158),
-                    rgb(145, 116, 1) 80%,
-                    rgb(192, 92, 4));
                 position: absolute;
                 top: 0;
             }
@@ -283,8 +278,7 @@
             var cacheDate = 0;
             var sunrise, sunset;
 
-            function changeBackground() {
-                var now = new Date();
+            function doChangeBackground(now) {
                 var nowHour = now.getHours();
                 var nowMinutes = now.getMinutes();
                 // var nowHour = now.getMinutes()%24+3;
@@ -336,9 +330,37 @@
                 canvas.style.background = bg;
             }
 
+            function changeBackground() {
+                var now = new Date();
+                doChangeBackground(now);
+            }
+
+
+            function simulate() {
+                var now = new Date();
+                var simulateSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+                var [sunriseTime, sunsetTime] = getSunRiseSetV2(now, 39.9, 116.5);
+                setInterval(function () {
+                    if (simulateSec > sunsetTime + 2000 || simulateSec < sunriseTime - 2000) {
+                        simulateSec = sunriseTime - 2000;
+                    } else if (simulateSec > sunriseTime + 2000 && simulateSec < sunsetTime - 2000) {
+                        simulateSec = sunsetTime - 2000;
+                    } else {
+                        simulateSec = (simulateSec + 15) % (24 * 3600);
+                    }
+                    var dt = new Date(
+                        now.getFullYear(), now.getMonth(), now.getDate(),
+                        simulateSec / 3600, simulateSec % 3600 / 60, simulateSec % 60);
+                    doChangeBackground(dt);
+                }, 50);
+            }
+
             function start_main() {
                 changeBackground();
-                setInterval(changeBackground, 1000);
+
+                var nowSec = new Date().getSeconds();
+                setTimeout(simulate, (nowSec - Math.floor(nowSec/10)*10)*1000);
+                // setInterval(changeBackground, 1000);
 
                 animate();
 
