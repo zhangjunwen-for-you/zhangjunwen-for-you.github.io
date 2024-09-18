@@ -356,11 +356,11 @@
             var sunsetTime = 18*3600;
             var now = new Date();
             cacheDate = 0;
-            refreshCacheData(now, sunriseTime, sunsetTime, 4*3600, 2*3600);
+            refreshCacheData(now, sunriseTime, sunsetTime, 5*3600, 2.5*3600);
 
             var simulateSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
             setInterval(function () {
-                simulateSec = (simulateSec + 120) % (24 * 3600);
+                simulateSec = (simulateSec + 60) % (24 * 3600);
                 var dt = new Date(
                     now.getFullYear(), now.getMonth(), now.getDate(),
                     simulateSec / 3600, simulateSec % 3600 / 60, simulateSec % 60);
