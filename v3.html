@@ -99,7 +99,7 @@
                 for(var ind in this.ctxList) {
                     this.ctxList[ind].beginPath();
                     this.ctxList[ind].arc(this.x, this.y, this.r, 0, 2 * Math.PI, false);
-                    this.ctxList[ind].shadowBlur = this.rMax*8;
+                    this.ctxList[ind].shadowBlur = this.r*10;
                     this.ctxList[ind].shadowColor = "white";
                     this.ctxList[ind].fillStyle = this.color;
                     this.ctxList[ind].fill();
