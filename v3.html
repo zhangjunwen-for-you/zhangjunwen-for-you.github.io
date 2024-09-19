@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>It's for you, ZJW</title>
+    <link rel="shortcut icon" href="https://img.icons8.com/color/96/like--v1.png">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        html,
+        body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            position: absolute;
+            top: 0;
+        }
+
+        * {
+            overflow: hidden;
+        }
+
+        #mtext {
+            margin: auto;
+            position: absolute;
+            font-size: 88px;
+            font-family: 'Times New Roman', Times, serif;
+            z-index: 100;
+            width: 100%;
+            text-align: center;
+            top: 20%;
+        }
+
+        #mtext.thidden {
+            display: none;
+        }
+
+        #canvas {
+            background-color: transparent;
+            position: absolute;
+            top: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="mtext" class="thidden">
+        ❤
+    </div>
+    <canvas id="canvas"></canvas>
+    <script type="text/javascript" src="time.js"></script>
+    <script type="text/javascript" src="skybg.js"></script>
+    <script type="text/javascript">
+        var C_WIDTH = document.body.offsetWidth;
+        var C_HEIGHT = document.body.offsetHeight;
+        var C_SKY_CENTER_X = C_WIDTH/2;
+        var C_SKY_CENTER_Y = C_HEIGHT*0.9;
+        var C_SKY_MAX_RADIUS = Math.sqrt(Math.pow(C_SKY_CENTER_Y, 2) + Math.pow(C_SKY_CENTER_X, 2))*0.98;
+        var C_REDIST_FACTOR_NEAR_QUADRATIC = 0.4;
+
+        var globalNowSec = 0;
+
+        function Star(ctxList, posAngle, posRadius, r, color, twinking) {
+            this.ctxList = ctxList;
+            this.posAngle = posAngle;
+            this.posRadius = posRadius;
+
+            this.rawPosAngle = posAngle;
+
+            this.x = C_SKY_CENTER_X + this.posRadius*Math.cos(this.posAngle);
+            this.y = C_SKY_CENTER_Y + this.posRadius*Math.sin(this.posAngle);
+
+            if (twinking) {
+                this.rMax = r;
+                this.rMin = r*(0.2 + Math.random() * 0.4);
+                this.r = this.rMin + Math.random() * (this.rMax - this.rMin);
+            } else {
+                this.r = r;
+            }
+
+            this.rChange = 0.03*(Math.random()*0.2 + 0.9);
+            this.color = color;
+            this.shouldTwinking = twinking;
+        }
+
+        Star.prototype = {
+            constructor: Star,
+            render: function () {
+                if (this.x < 0 || this.x > C_WIDTH || this.y < 0 || this.y > C_HEIGHT) {
+                    return;
+                }
+                for(var ind in this.ctxList) {
+                    this.ctxList[ind].beginPath();
+                    this.ctxList[ind].arc(this.x, this.y, this.r, 0, 2 * Math.PI, false);
+                    this.ctxList[ind].shadowBlur = 8;
+                    this.ctxList[ind].shadowColor = "white";
+                    this.ctxList[ind].fillStyle = this.color;
+                    this.ctxList[ind].fill();
+                }
+            },
+            update: function () {
+                var offset = 2*Math.PI*(globalNowSec/24/3600);
+                this.posAngle = this.rawPosAngle + offset;
+
+                this.x = C_SKY_CENTER_X + this.posRadius*Math.cos(this.posAngle);
+                this.y = C_SKY_CENTER_Y + this.posRadius*Math.sin(this.posAngle);
+
+                if (this.x < 0 || this.x > C_WIDTH || this.y < 0 || this.y > C_HEIGHT) {
+                    return;
+                }
+
+                if (this.shouldTwinking) {
+                    if (this.r > this.rMax || this.r + this.rChange < this.rMin) {
+                        this.rChange = -this.rChange;
+                    }
+                    this.r += this.rChange*(Math.random()*0.2+0.8);
+                }
+            }
+        }
+
+        var canvas = document.getElementById("canvas");
+
+        var context = canvas.getContext("2d");
+
+        canvas.width = C_WIDTH;
+        canvas.height = C_HEIGHT;
+
+        function randomColor() {
+            var arrColors = ["ffffff", "ffecd3", "bfcfff"];
+            return "#" + arrColors[Math.floor((Math.random() * 3))];
+        }
+
+        function createStars(ctxList, num, rRand, rBase, twinking) {
+            var result = [];
+            for (i = 0; i < num; i++) {
+                var randPosAngle = 2*Math.PI*Math.random();
+                var randPosRadius = C_SKY_MAX_RADIUS*(Math.pow(Math.random(), C_REDIST_FACTOR_NEAR_QUADRATIC));
+                var randR = Math.random() * rRand + rBase;
+
+                var star = new Star(ctxList, randPosAngle, randPosRadius, randR, randomColor(), twinking);
+                arrStars.push(star);
+            }
+            return result;
+        }
+
+        var arrStars = [];
+        arrStars.push(...createStars([context], 520, 1.3, .8, true));
+        arrStars.push(...createStars([context], 1314, 0.5, .5, false));
+        arrStars.push(...createStars([context], 202, 0.3, .3, false));
+
+        function animate() {
+            for (var i = 0; i < arrStars.length; i++) {
+                arrStars[i].update();
+            }
+            context.clearRect(0, 0, C_WIDTH, C_HEIGHT);
+            for (var i = 0; i < arrStars.length; i++) {
+                arrStars[i].render();
+            }
+            requestAnimationFrame(animate);
+        }
+
+        var cacheDate = 0;
+        function changeBackgroundV2() {
+            var now = new Date();
+            var [sunriseTime, sunsetTime] = getSunRiseSetV2(now, 39.9, 116.5);
+            if (cacheDate == 0 || cacheDate.getMonth() != now.getMonth() || cacheDate.getDate() != now.getDate()) {
+                cacheDate = now;
+                resetBgConf(sunriseTime, sunsetTime, 30*60, 15*60);
+            }
+            doChangeBackgroundV2(now, false);
+            globalNowSec = getSecsOfDay(now);
+        }
+
+        function simulate() {
+            var sunriseTime = 6*3600;
+            var sunsetTime = 18*3600;
+            var now = new Date();
+            resetBgConf(sunriseTime, sunsetTime, 5*3600, 2.5*3600);
+
+            var simulateSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+            setInterval(function () {
+                simulateSec = (simulateSec + 30) % (24 * 3600);
+                var dt = new Date(
+                    now.getFullYear(), now.getMonth(), now.getDate(),
+                    simulateSec / 3600, simulateSec % 3600 / 60, simulateSec % 60);
+                doChangeBackgroundV2(dt, true);
+                globalNowSec = simulateSec;
+            }, 10);
+        }
+
+        var count = 0;
+        var last_index = 0;
+        function randomText(e) {
+            var choices = ["❤", "Z", "J", "W", "D", "K", "Q", "❤", "Z", "J", "W", "D", "K", "Q"];
+            if (count > 3) {
+                choices.push("D ❤ Z", "Z ❤ D");
+            }
+            var index = Math.floor(Math.random() * choices.length);
+            if (index == last_index) {
+                index++;
+                last_index = index;
+            }
+            mtext.innerText = choices[index];
+            var colorRed = Math.floor(Math.random() * 200 + 1);
+            var colorGreen = Math.floor(Math.random() * colorRed + 1);
+            var colorBlue = Math.floor(Math.random() * 30 + colorRed);
+            mtext.style.color = "rgb(" + colorRed + ", " + colorGreen + ", " + Math.min(colorBlue, 255) + ")";
+            mtext.classList.remove("thidden");
+            count++;
+            return false;
+        }
+
+        function hideText(e) {
+            mtext.classList.add("thidden");
+            return false;
+        }
+
+        function startMain() {
+            changeBackgroundV2();
+
+            var nowSec = new Date().getSeconds();
+            setTimeout(simulate, (nowSec - Math.floor(nowSec/10)*10)*1000);
+            // setInterval(changeBackgroundV2, 1000);
+
+            animate();
+
+            document.oncontextmenu = (e) => {
+                e.preventDefault()
+                return false;
+            }
+            canvas.oncontextmenu = (e) => {
+                e.preventDefault()
+                return false;
+            }
+            mtext.oncontextmenu = (e) => {
+                e.preventDefault()
+                return false;
+            }
+
+            canvas.onmousedown = randomText;
+            canvas.onmouseup = hideText;
+            canvas.ontouchstart = randomText;
+            canvas.ontouchend = hideText;
+        }
+
+        startMain();
+    </script>
+</body>
+
+</html>
