@@ -56,16 +56,26 @@
         var C_WIDTH = document.body.offsetWidth;
         var C_HEIGHT = document.body.offsetHeight;
         var C_SKY_CENTER_X = C_WIDTH/2;
-        var C_SKY_CENTER_Y = C_HEIGHT*0.9;
+        var C_SKY_CENTER_Y = C_HEIGHT*1.2;
         var C_SKY_MAX_RADIUS = Math.sqrt(Math.pow(C_SKY_CENTER_Y, 2) + Math.pow(C_SKY_CENTER_X, 2))*0.98;
         var C_REDIST_FACTOR_NEAR_QUADRATIC = 0.4;
+        var C_2PI = Math.PI*2;
 
         var globalNowSec = 0;
+        var globalNowRatio = globalNowSec/24/3600;
+        var globalNowAngleOffset = globalNowRatio*C_2PI;
+
         var canvas = document.getElementById("canvas");
         var context = canvas.getContext("2d");
 
         canvas.width = C_WIDTH;
         canvas.height = C_HEIGHT;
+
+        function updateGlobals(nowSec) {
+            globalNowSec = nowSec;
+            globalNowRatio = globalNowSec/24/3600;
+            globalNowAngleOffset = globalNowRatio*C_2PI;
+        }
 
         function Star(ctxList, posAngle, posRadius, r, color, twinking) {
             this.ctxList = ctxList;
@@ -106,8 +116,7 @@
                 }
             },
             update: function () {
-                var offset = 2*Math.PI*(globalNowSec/24/3600);
-                this.posAngle = this.rawPosAngle + offset;
+                this.posAngle = this.rawPosAngle + globalNowAngleOffset;
 
                 this.x = C_SKY_CENTER_X + this.posRadius*Math.cos(this.posAngle);
                 this.y = C_SKY_CENTER_Y + this.posRadius*Math.sin(this.posAngle);
@@ -168,7 +177,7 @@
                 resetBgConf(sunriseTime, sunsetTime, 30*60, 15*60);
             }
             doChangeBackgroundV2(now, false);
-            globalNowSec = getSecsOfDay(now);
+            updateGlobals(now);
         }
 
         function simulate() {
@@ -179,13 +188,13 @@
 
             var simulateSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
             setInterval(function () {
-                simulateSec = (simulateSec + 10) % (24 * 3600);
+                simulateSec = (simulateSec + 60) % (24 * 3600);
                 var dt = new Date(
                     now.getFullYear(), now.getMonth(), now.getDate(),
                     simulateSec / 3600, simulateSec % 3600 / 60, simulateSec % 60);
                 doChangeBackgroundV2(dt, true);
-                globalNowSec = simulateSec;
-            }, 5);
+                updateGlobals(simulateSec);
+            }, 20);
         }
 
         var count = 0;
