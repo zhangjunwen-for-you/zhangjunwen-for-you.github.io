@@ -188,13 +188,13 @@
 
             var simulateSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
             setInterval(function () {
-                simulateSec = (simulateSec + 60) % (24 * 3600);
+                simulateSec = (simulateSec + 40) % (24 * 3600);
                 var dt = new Date(
                     now.getFullYear(), now.getMonth(), now.getDate(),
                     simulateSec / 3600, simulateSec % 3600 / 60, simulateSec % 60);
                 doChangeBackgroundV2(dt, true);
                 updateGlobals(simulateSec);
-            }, 20);
+            }, 10);
         }
 
         var count = 0;
