@@ -6,13 +6,15 @@ var dawn_day = [[143, 161, 184], [155, 171, 194], [169, 185, 200], [187, 199, 20
 var day = [[78, 120, 196], [78, 120, 196], [78, 120, 196], [78, 120, 196], [78, 120, 196], [78, 120, 196]];
 var day_dusk = [[103, 121, 144], [115, 131, 154], [129, 145, 160], [147, 159, 169], [170, 172, 169], [189, 169, 145]];
 var dusk = [[134, 145, 160], [195, 194, 180], [245, 223, 177], [249, 212, 143], [244, 178, 109], [239, 127, 75]];
-var dusk_night = [[8, 28, 65], [31, 51, 114], [50, 73, 146], [115, 123, 196], [172, 161, 201], [204, 189, 198]];
+var dusk_night = [[12, 28, 65], [31, 51, 114], [80, 103, 166], [135, 143, 196], [172, 161, 201], [204, 189, 198]];
 
 
-function BackgroundConfig(secs, rgbList, gradientPointList) {
-    this.secs = secs;
-    this.rgbList = rgbList;
-    this.gradientPointList = gradientPointList; // 长度必须是 rgbList.length - 2
+class BackgroundConfig {
+    constructor(secs, rgbList, gradientPointList) {
+        this.secs = secs;
+        this.rgbList = rgbList;
+        this.gradientPointList = gradientPointList; // 长度必须是 rgbList.length - 2
+    }
 }
 
 var backgroundConfigs = [];
