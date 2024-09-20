@@ -93,6 +93,9 @@ function createStars(ctxList, num, rRand, rBase, twinking) {
 /*************** Sun *******************/
 /***************************************/
 
+const C_SUN_RADIUS = 30;
+const C_SUN_ORBIT_RADIUS = C_HEIGHT;
+
 class Sun {
     constructor(ctxList, posAngle, posRadius, r, color) {
         this.ctxList = ctxList;
@@ -100,30 +103,101 @@ class Sun {
         this.posRadius = posRadius;
         this.r = r;
         this.color = color;
+        this.orbitY = C_HEIGHT;
+        this.x = C_SKY_CENTER_X + this.posRadius * Math.cos(this.posAngle);
+        this.y = this.orbitY + this.posRadius * Math.sin(this.posAngle);
     }
 
     render() {
-        // compute the (x, y) coordinate of the sun then render it with sun blurring effect
-        var x = C_SKY_CENTER_X + this.posRadius * Math.cos(this.posAngle);
-        var y = C_SKY_CENTER_Y + this.posRadius * Math.sin(this.posAngle);
+        if (this.x < -this.r*2 || this.x > C_WIDTH + this.r*2 || this.y < -this.r*2 || this.y > C_HEIGHT + this.r*2) {
+            return;
+        }
+
         for (var ind in this.ctxList) {
             var ctx = this.ctxList[ind];
             ctx.beginPath();
-            ctx.arc(x, y, this.r, 0, 2 * Math.PI, false);
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = "white";
+            ctx.arc(this.x, this.y, this.r, 0, 2 * Math.PI, false);
+            ctx.shadowBlur = 30;
+            ctx.shadowColor = this.color;
             ctx.fillStyle = this.color;
             ctx.fill();
         }
     }
 
-    update(nowAngleOffset, dt) {
-        this.posAngle = nowAngleOffset;
+    update(nowAngleOffset, sunriseSec) {
+        this.posAngle = nowAngleOffset + 0.5*Math.PI;
+        this.orbitY = C_HEIGHT + Math.cos(Math.PI - C_2PI*sunriseSec/C_ONE_DAY_SECS) * C_SUN_ORBIT_RADIUS;
+
+        this.x = C_SKY_CENTER_X + this.posRadius * Math.cos(this.posAngle);
+        this.y = this.orbitY + this.posRadius * Math.sin(this.posAngle);
+    }
+
+    isVisible() {
+        return this.x > -this.r*2 && this.x < C_WIDTH + this.r*2 && this.y > -this.r*2 && this.y < C_HEIGHT + this.r*2;
+    }
+
+    isEclips(moon) {
+        if (!this.isVisible()) {
+            return false;
+        }
+        const distToMoon = Math.sqrt(Math.pow(this.x - moon.x, 2) + Math.pow(this.y - moon.y, 2));
+        return distToMoon < this.r + moon.r;
+    }
+
+    renderEclips(moon) {
+        if (!this.isVisible() || !this.isEclips(moon)) {
+            return;
+        }
+
+        this.render();
+
+        const dist = Math.sqrt(Math.pow(this.x - moon.x, 2) + Math.pow(this.y - moon.y, 2));
+        if (dist <= this.r - moon.r) {
+            for(var ind in this.ctxList) {
+                var ctx = this.ctxList[ind];
+                ctx.beginPath();
+                ctx.arc(moon.x, moon.y, moon.r, 0, 2 * Math.PI, false);
+                ctx.shadowBlur = 5;
+                ctx.shadowColor = "#101520";
+                ctx.fillStyle = "#101520";
+                ctx.fill();
+            }
+            return;
+        }
+
+        const sunPow2 = Math.pow(this.r, 2);
+        const moonPow2 = Math.pow(moon.r, 2);
+        const chordLen = Math.sqrt(sunPow2 - Math.pow((sunPow2 - moonPow2 + Math.pow(dist, 2))/2/dist, 2));
+        const angleToCenterForSun = Math.atan2(moon.y - this.y, moon.x - this.x);
+        const angleToEdgeForSun = Math.asin(chordLen / this.r);
+        const angleStartForSun = angleToCenterForSun - angleToEdgeForSun;
+        const angleEndForSun = angleToCenterForSun + angleToEdgeForSun;
+
+        const startPointX = this.x + this.r * Math.cos(angleStartForSun);
+        const startPointY = this.y + this.r * Math.sin(angleStartForSun);
+        const endPointX = this.x + this.r * Math.cos(angleEndForSun);
+        const endPointY = this.y + this.r * Math.sin(angleEndForSun);
+
+        // compute the start angle for moon based on end points
+        const angleStartForMoon = Math.atan2(startPointY - moon.y, startPointX - moon.x);
+        const angleEndForMoon = Math.atan2(endPointY - moon.y, endPointX - moon.x);
+
+        for(var ind in this.ctxList) {
+            var ctx = this.ctxList[ind];
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.r, angleStartForSun, angleEndForSun, false);
+            ctx.arc(moon.x, moon.y, moon.r, angleStartForMoon, angleEndForMoon, true);
+            ctx.closePath();
+            ctx.shadowBlur = 3;
+            ctx.shadowColor = "#101520";
+            ctx.fillStyle = "#101520";
+            ctx.fill();
+        }
     }
 }
 
 function createSun(ctxList) {
-    var sun = new Sun(ctxList, 0, C_SKY_MAX_RADIUS*0.8, 35, "#ffcc00");
+    var sun = new Sun(ctxList, 0, C_SUN_ORBIT_RADIUS, C_SUN_RADIUS, "#ffeeee");
     return sun;
 }
 
@@ -132,8 +206,10 @@ function createSun(ctxList) {
 /****************************************/
 
 const C_REF_NEW_MOON = new Date(Date.UTC(2000, 0, 6, 18, 14));
-const MOON_DAY_COLOR = [193, 208, 240];
-const MOON_NIGHT_COLOR = [240, 240, 240];
+const C_MOON_DAY_COLOR = [193, 208, 240];
+const C_MOON_NIGHT_COLOR = [240, 240, 240];
+const C_MOON_RADIUS = 25;
+const C_MOON_ORBIT_RADIUS = C_HEIGHT;
 
 class Moon {
     constructor(ctxList, posAngle, posRadius, r, color) {
@@ -146,13 +222,13 @@ class Moon {
         this.rotate = 0;
         this.blurNormalRadius = 20;
         this.blurFactor = 1;
+        this.orbitY = C_HEIGHT;
+        this.x = C_SKY_CENTER_X + this.posRadius * Math.cos(this.posAngle);
+        this.y = this.orbitY + this.posRadius * Math.sin(this.posAngle);
     }
 
     render() {
-        // compute the (x, y) coordinate of the moon then render it with moon blurring effect
-        const x = C_SKY_CENTER_X + this.posRadius * Math.cos(this.posAngle);
-        const y = C_SKY_CENTER_Y + this.posRadius * Math.sin(this.posAngle);
-        if (x < -this.r*2 || x > C_WIDTH + this.r*2 || y < -this.r*2 || y > C_HEIGHT + this.r*2) {
+        if (this.x < -this.r*2 || this.x > C_WIDTH + this.r*2 || this.y < -this.r*2 || this.y > C_HEIGHT + this.r*2) {
             return;
         }
         const adjustedPhase = this.phase*4;
@@ -180,8 +256,8 @@ class Moon {
         for (var ind in this.ctxList) {
             var ctx = this.ctxList[ind];
             ctx.beginPath();
-            ctx.arc(x, y, this.r, arcStart+this.rotate, arcEnd+this.rotate, false);
-            ctx.ellipse(x, y, this.r*epllipseLongAxis, this.r, this.rotate, ellipseStart, ellipseEnd, ellipseCounterClockwise);
+            ctx.arc(this.x, this.y, this.r, arcStart+this.rotate, arcEnd+this.rotate, false);
+            ctx.ellipse(this.x, this.y, this.r*epllipseLongAxis, this.r, this.rotate, ellipseStart, ellipseEnd, ellipseCounterClockwise);
             ctx.closePath();
 
             ctx.shadowBlur = this.blurNormalRadius*this.blurFactor;
@@ -210,6 +286,10 @@ class Moon {
         this.updateColor(dt, sunriseSec, sunsetSec, normalSec, midSec);
         this.updateBlur(dt, sunriseSec, sunsetSec, normalSec, midSec);
 
+        this.orbitY = C_HEIGHT - Math.cos(Math.PI - C_2PI*sunriseSec/C_ONE_DAY_SECS) * C_MOON_ORBIT_RADIUS;
+        this.x = C_SKY_CENTER_X + this.posRadius * Math.cos(this.posAngle);
+        this.y = this.orbitY + this.posRadius * Math.sin(this.posAngle);
+
         if (dt.getHours() == 0) {
             console.log(dt, this.blurNormalRadius, this.phase, nowAngleOffset/C_2PI, this.posAngle/C_2PI*360%360, nowAngleOffset/C_2PI*360%360, initialAngle/C_2PI*360%360);
         }
@@ -218,23 +298,23 @@ class Moon {
     updateColor(dt, sunriseSec, sunsetSec, normalSec, midSec) {
         const nowSec = dt.getHours()*3600 + dt.getMinutes()*60 + dt.getSeconds();
         if (nowSec < sunriseSec + midSec) {
-            this.color = "rgb(" + MOON_NIGHT_COLOR[0] + ", " + MOON_NIGHT_COLOR[1] + ", " + MOON_NIGHT_COLOR[2] + ")";
+            this.color = "rgb(" + C_MOON_NIGHT_COLOR[0] + ", " + C_MOON_NIGHT_COLOR[1] + ", " + C_MOON_NIGHT_COLOR[2] + ")";
         } else if (nowSec < sunriseSec + normalSec) {
             const ratio = (nowSec - sunriseSec - midSec) / midSec;
-            const redColor = MOON_NIGHT_COLOR[0] + (MOON_DAY_COLOR[0] - MOON_NIGHT_COLOR[0]) * ratio;
-            const greenColor = MOON_NIGHT_COLOR[1] + (MOON_DAY_COLOR[1] - MOON_NIGHT_COLOR[1]) * ratio;
-            const blueColor = MOON_NIGHT_COLOR[2] + (MOON_DAY_COLOR[2] - MOON_NIGHT_COLOR[2]) * ratio;
+            const redColor = C_MOON_NIGHT_COLOR[0] + (C_MOON_DAY_COLOR[0] - C_MOON_NIGHT_COLOR[0]) * ratio;
+            const greenColor = C_MOON_NIGHT_COLOR[1] + (C_MOON_DAY_COLOR[1] - C_MOON_NIGHT_COLOR[1]) * ratio;
+            const blueColor = C_MOON_NIGHT_COLOR[2] + (C_MOON_DAY_COLOR[2] - C_MOON_NIGHT_COLOR[2]) * ratio;
             this.color = "rgb(" + redColor + ", " + greenColor + ", " + blueColor + ")";
         } else if (nowSec < sunsetSec - midSec - 2*normalSec) {
-            this.color = "rgb(" + MOON_DAY_COLOR[0] + ", " + MOON_DAY_COLOR[1] + ", " + MOON_DAY_COLOR[2] + ")";
+            this.color = "rgb(" + C_MOON_DAY_COLOR[0] + ", " + C_MOON_DAY_COLOR[1] + ", " + C_MOON_DAY_COLOR[2] + ")";
         } else if (nowSec < sunsetSec - midSec) {
             const ratio = (nowSec - sunsetSec + midSec + 2*normalSec) / normalSec / 2;
-            const redColor = MOON_DAY_COLOR[0] + (MOON_NIGHT_COLOR[0] - MOON_DAY_COLOR[0]) * ratio;
-            const greenColor = MOON_DAY_COLOR[1] + (MOON_NIGHT_COLOR[1] - MOON_DAY_COLOR[1]) * ratio;
-            const blueColor = MOON_DAY_COLOR[2] + (MOON_NIGHT_COLOR[2] - MOON_DAY_COLOR[2]) * ratio;
+            const redColor = C_MOON_DAY_COLOR[0] + (C_MOON_NIGHT_COLOR[0] - C_MOON_DAY_COLOR[0]) * ratio;
+            const greenColor = C_MOON_DAY_COLOR[1] + (C_MOON_NIGHT_COLOR[1] - C_MOON_DAY_COLOR[1]) * ratio;
+            const blueColor = C_MOON_DAY_COLOR[2] + (C_MOON_NIGHT_COLOR[2] - C_MOON_DAY_COLOR[2]) * ratio;
             this.color = "rgb(" + redColor + ", " + greenColor + ", " + blueColor + ")";
         } else {
-            this.color = "rgb(" + MOON_NIGHT_COLOR[0] + ", " + MOON_NIGHT_COLOR[1] + ", " + MOON_NIGHT_COLOR[2] + ")";
+            this.color = "rgb(" + C_MOON_NIGHT_COLOR[0] + ", " + C_MOON_NIGHT_COLOR[1] + ", " + C_MOON_NIGHT_COLOR[2] + ")";
         }
     }
 
@@ -258,7 +338,7 @@ class Moon {
 }
 
 function createMoon(ctxList, offset, nowSec) {
-    var moon = new Moon(ctxList, 0, C_SKY_MAX_RADIUS*0.8, 25, "#f0f0f0");
+    var moon = new Moon(ctxList, 0, C_MOON_ORBIT_RADIUS, C_MOON_RADIUS, "#f0f0f0");
     moon.update(offset, new Date(nowSec*1000));
     return moon;
 }
@@ -272,13 +352,41 @@ function animateSkyObjects(sun, moon, stars, varsGetter) {
     for (var i = 0; i < stars.length; i++) {
         stars[i].update(vars.globalNowAngleOffset);
     }
-    sun.update(vars.globalNowAngleOffset, new Date(vars.globalNowSec*1000));
     moon.update(vars.globalNowAngleOffset, new Date(vars.globalNowSec*1000), vars.sunriseSec, vars.sunsetSec, vars.normalToChangeInSecs, vars.midToChangeInSecs);
+
     context.clearRect(0, 0, C_WIDTH, C_HEIGHT);
     for (var i = 0; i < stars.length; i++) {
+        const distToMoon = Math.sqrt(Math.pow(stars[i].x - moon.x, 2) + Math.pow(stars[i].y - moon.y, 2));
+        if (distToMoon < moon.r + stars[i].r) {
+            continue;
+        }
         stars[i].render();
     }
-    // sun.render();
     moon.render();
     requestAnimationFrame(animateSkyObjects.bind(null, sun, moon, stars, varsGetter));
+}
+
+function animateSkyObjectsV5(sun, moon, stars, varsGetter) {
+    var vars = varsGetter();
+    for (var i = 0; i < stars.length; i++) {
+        stars[i].update(vars.globalNowAngleOffset);
+    }
+    sun.update(vars.globalNowAngleOffset, vars.sunriseSec);
+    moon.update(vars.globalNowAngleOffset, new Date(vars.globalNowSec*1000), vars.sunriseSec, vars.sunsetSec, vars.normalToChangeInSecs, vars.midToChangeInSecs);
+
+    context.clearRect(0, 0, C_WIDTH, C_HEIGHT);
+    for (var i = 0; i < stars.length; i++) {
+        const distToMoon = Math.sqrt(Math.pow(stars[i].x - moon.x, 2) + Math.pow(stars[i].y - moon.y, 2));
+        if (distToMoon < moon.r + stars[i].r) {
+            continue;
+        }
+        stars[i].render();
+    }
+    if (sun.isEclips(moon)) {
+        sun.renderEclips(moon);
+    } else {
+        sun.render();
+        moon.render();
+    }
+    requestAnimationFrame(animateSkyObjectsV5.bind(null, sun, moon, stars, varsGetter));
 }
