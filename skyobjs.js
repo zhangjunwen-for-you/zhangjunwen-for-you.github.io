@@ -94,7 +94,7 @@ function createStars(ctxList, num, rRand, rBase, twinking) {
 /***************************************/
 
 const C_SUN_RADIUS = 30;
-const C_SUN_ORBIT_RADIUS = C_HEIGHT;
+const C_SUN_ORBIT_RADIUS = C_HEIGHT - 2*C_SUN_RADIUS - 1;
 
 class Sun {
     constructor(ctxList, posAngle, posRadius, r, color) {
@@ -209,7 +209,7 @@ const C_REF_NEW_MOON = new Date(Date.UTC(2000, 0, 6, 18, 14));
 const C_MOON_DAY_COLOR = [193, 208, 240];
 const C_MOON_NIGHT_COLOR = [240, 240, 240];
 const C_MOON_RADIUS = 25;
-const C_MOON_ORBIT_RADIUS = C_HEIGHT;
+const C_MOON_ORBIT_RADIUS = C_HEIGHT - 2*C_MOON_RADIUS - 1;
 
 class Moon {
     constructor(ctxList, posAngle, posRadius, r, color) {
