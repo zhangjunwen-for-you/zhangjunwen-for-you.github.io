@@ -7,170 +7,95 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        html,
-        body {
-            height: 100%;
-            width: 100%;
-            margin: 0;
-            padding: 0;
-            position: absolute;
-            top: 0;
-        }
-
-        * {
-            overflow: hidden;
-        }
-
-        #mtext {
-            margin: auto;
-            position: absolute;
-            font-size: 88px;
-            font-family: 'Times New Roman', Times, serif;
-            z-index: 100;
-            width: 100%;
-            text-align: center;
-            top: 20%;
-        }
-
-        #mtext.thidden {
-            display: none;
-        }
-
-        #canvas_bg, #canvas_bg2{
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-
-        #canvas {
-            background-color: transparent;
-            position: absolute;
-            top: 0;
-        }
-    </style>
+    <link href="index.css" rel="stylesheet" />
 </head>
 
 <body>
     <div id="mtext" class="thidden">
         ❤
     </div>
-    <canvas id="canvas" style="z-index: 1000;"></canvas>
-    <canvas id="canvas_bg"></canvas>
-    <canvas id="canvas_bg2"></canvas>
+    <canvas id="canvas"></canvas>
     <script type="text/javascript">
-        var globalNowSec = 0;
-        function Star(ctxList, x, y, r, color, twinking) {
-            this.ctxList = ctxList;
-            this.x = x;
-            this.y = y;
+        const C_WIDTH = document.body.offsetWidth;
+        const C_HEIGHT = document.body.offsetHeight;
+        const C_2PI = Math.PI*2;
+        const C_ONE_DAY_SECS = 24*3600;
+        const C_ONE_DAY_MS = 24*3600*1000;
+        const C_LOCALE_OFFSET = 8*3600;
 
-            this.rawX = x;
+        const initialTime = Date.now();
 
-            if (twinking) {
-                this.rMax = r;
-                this.rMin = r*(0.2 + Math.random() * 0.4);
-                this.r = this.rMin + Math.random() * (this.rMax - this.rMin);
-            } else {
-                this.r = r;
+        // 现实生活中的的1ms代表程序运行的多少毫秒
+        var tickUnitInMs = 1;
+
+        var refreshIntervalInMs = 1000;
+
+        class GlobalVariables {
+            constructor() {
+                this.globalNowSec = 0;
+                this.globalNowAngleOffset = 0;
+                this.sunriseSec = 0;
+                this.sunsetSec = 0;
+                this.normalToChangeInSecs = 0;
+                this.midToChangeInSecs = 0;
             }
-            this.rChange = 0.03*(Math.random()*0.2 + 0.9);
-            this.color = color;
-            this.shouldTwinking = twinking;
 
-            this.rendered = false;
-        }
-
-        Star.prototype = {
-            constructor: Star,
-            render: function () {
-                if (!this.shouldTwinking && this.rendered) {
-                    return;
-                }
-                if (!this.rendered) {
-                    this.rendered = true;
-                }
-                for(var ind in this.ctxList) {
-                    this.ctxList[ind].beginPath();
-                    this.ctxList[ind].arc(this.x, this.y, this.r, 0, 2 * Math.PI, false);
-                    this.ctxList[ind].shadowBlur = 8;
-                    this.ctxList[ind].shadowColor = "white";
-                    this.ctxList[ind].fillStyle = this.color;
-                    this.ctxList[ind].fill();
-                }
-            },
-            update: function () {
-                if (!this.shouldTwinking) {
-                    return;
-                }
-                if (this.r > this.rMax || this.r < this.rMin) {
-                    this.rChange = -this.rChange;
-                }
-                this.r += this.rChange*(Math.random()*0.2+0.8);
-
-                var offset = Math.floor(C_WIDTH*(globalNowSec/24/3600));
-                this.x = (this.rawX + offset)%C_WIDTH;
+            update(nowSec, sunriseTime, sunsetTime, normalToChangeInSecs, midToChangeInSecs) {
+                this.globalNowSec = nowSec;
+                this.globalNowAngleOffset = (this.globalNowSec + C_LOCALE_OFFSET)/C_ONE_DAY_SECS*C_2PI;
+                this.sunriseSec = sunriseTime;
+                this.sunsetSec = sunsetTime;
+                this.normalToChangeInSecs = normalToChangeInSecs;
+                this.midToChangeInSecs = midToChangeInSecs;
             }
         }
 
-        var canvasBg = document.getElementById("canvas_bg");
-        var canvasBg2 = document.getElementById("canvas_bg2");
-        var canvas = document.getElementById("canvas");
+        var globalVars = new GlobalVariables();
 
-        var contextBg = canvasBg.getContext("2d");
-        var contextBg2 = canvasBg2.getContext("2d");
         var context = canvas.getContext("2d");
 
-        var C_WIDTH = document.body.offsetWidth;
-        var C_HEIGHT = document.body.offsetHeight;
-
-        canvasBg.width = C_WIDTH;
-        canvasBg.height = C_HEIGHT;
-        canvasBg2.width = C_WIDTH;
-        canvasBg2.height = C_HEIGHT;
         canvas.width = C_WIDTH;
         canvas.height = C_HEIGHT;
+    </script>
+    <script type="text/javascript" src="time.js"></script>
+    <script type="text/javascript" src="skybg.js"></script>
+    <script type="text/javascript" src="skyobjs.js"></script>
+    <script type="text/javascript">
+        var [sunriseTime, sunsetTime] = getSunRiseSetV2(new Date(initialTime), 39.9, 116.5);
+        globalVars.update(initialTime/1000, sunriseTime, sunsetTime, 30*60, 15*60);
 
-        function randomColor() {
-            var arrColors = ["ffffff", "ffecd3", "bfcfff"];
-            return "#" + arrColors[Math.floor((Math.random() * 3))];
-        }
-
+        var moon = createMoon([context], globalVars.globalNowAngleOffset, globalVars.globalNowSec);
+        var sun = createSun([context]);
         var arrStars = [];
-        for (i = 0; i < 202; i++) {
-            var randX = Math.floor((Math.random() * C_WIDTH) + 1);
-            var randY = Math.floor((Math.random() * C_HEIGHT) + 1);
-            var randR = Math.random() * 1.3 + .8;
+        arrStars.push(...createStars([context], 520, 1.5, .5, true));
+        arrStars.push(...createStars([context], 1314, 0.7, .3, false));
+        arrStars.push(...createStars([context], 202, 0.3, .3, false));
 
-            var star = new Star([context], randX, randY, randR, randomColor(), true);
-            arrStars.push(star);
-        }
-        for (i = 0; i < 520; i++) {
-            var randX = Math.floor((Math.random() * C_WIDTH) + 1);
-            var randY = Math.floor((Math.random() * C_HEIGHT) + 1);
-            var randR = Math.random() * 0.5 + .3;
+        var cacheDate = 0;
+        function refreshAll() {
+            const actualNow = new Date();
+            const actualDiffInMs = actualNow - initialTime;
+            const usingDiffInMs = actualDiffInMs*tickUnitInMs;
+            const usingNow = new Date(initialTime + usingDiffInMs);
 
-            var star = new Star([contextBg, contextBg2], randX, randY, randR, randomColor(), false);
-            arrStars.push(star);
-        }
-        for (i = 0; i < 1314; i++) {
-            var randX = Math.floor((Math.random() * C_WIDTH) + 1);
-            var randY = Math.floor((Math.random() * C_HEIGHT) + 1);
-            var randR = Math.random() * 0.3 + .1;
-
-            var star = new Star([contextBg, contextBg2], randX, randY, randR, randomColor(), false);
-            arrStars.push(star);
-        }
-
-        function animate() {
-            for (var i = 0; i < arrStars.length; i++) {
-                arrStars[i].update();
+            var [sunriseTime, sunsetTime] = getSunRiseSetV2(usingNow, 39.9, 116.5);
+            const maxSpeedForExchange = 6000;
+            const speed = Math.min(tickUnitInMs, maxSpeedForExchange);
+            const normalToChangeInSecs = (240*speed/maxSpeedForExchange + 30)*60;
+            const midToChangeInSecs = normalToChangeInSecs/2;
+            if (cacheDate == 0 || cacheDate.getMonth() != usingNow.getMonth() || cacheDate.getDate() != usingNow.getDate()) {
+                cacheDate = usingNow;
+                resetBgConf(sunriseTime, sunsetTime, normalToChangeInSecs, midToChangeInSecs);
             }
-            context.clearRect(0, 0, C_WIDTH, C_HEIGHT);
-            for (var i = 0; i < arrStars.length; i++) {
-                arrStars[i].render();
-            }
-            requestAnimationFrame(animate);
+            doChangeBackgroundV2(usingNow, false);
+            globalVars.update(usingNow/1000, sunriseTime, sunsetTime, normalToChangeInSecs, midToChangeInSecs);
+
+            setTimeout(refreshAll, refreshIntervalInMs);
+        }
+
+        function startSimulate(speed, interval) {
+            tickUnitInMs = speed;
+            refreshIntervalInMs = interval;
         }
 
         var count = 0;
@@ -200,182 +125,13 @@
             return false;
         }
 
-        // see: https://gist.github.com/ruiokada/b28076d4911820ddcbbc
-        function getSunRiseSetV2(d, lat, lng, tz) {
-            var radians = Math.PI / 180.0;
-            var degrees = 180.0 / Math.PI;
-
-            var a = Math.floor((14 - (d.getMonth() + 1.0)) / 12)
-            var y = d.getFullYear() + 4800 - a;
-            var m = (d.getMonth() + 1) + 12 * a - 3;
-            var j_day = d.getDate() + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
-            var n_star = j_day - 2451545.0009 - lng / 360.0;
-            var n = Math.floor(n_star + 0.5);
-            var solar_noon = 2451545.0009 - lng / 360.0 + n;
-            var M = 356.0470 + 0.9856002585 * n;
-            var C = 1.9148 * Math.sin(M * radians) + 0.02 * Math.sin(2 * M * radians) + 0.0003 * Math.sin(3 * M * radians);
-            var L = (M + 102.9372 + C + 180) % 360;
-            var j_transit = solar_noon + 0.0053 * Math.sin(M * radians) - 0.0069 * Math.sin(2 * L * radians);
-            var D = Math.asin(Math.sin(L * radians) * Math.sin(23.45 * radians)) * degrees;
-            var cos_omega = (Math.sin(-0.83 * radians) - Math.sin(lat * radians) * Math.sin(D * radians)) / (Math.cos(lat * radians) * Math.cos(D * radians));
-
-            // sun never rises
-            if (cos_omega > 1)
-                return [null, -1];
-
-            // sun never sets
-            if (cos_omega < -1)
-                return [-1, null];
-
-            // get Julian dates of sunrise/sunset
-            var omega = Math.acos(cos_omega) * degrees;
-            var j_set = j_transit + omega / 360.0;
-            var j_rise = j_transit - omega / 360.0;
-
-            /*
-            * get sunrise and sunset times in UTC
-            * Check section "Finding Julian date given Julian day number and time of
-            *  day" on wikipedia for where the extra "+ 12" comes from.
-            */
-            var utc_time_set = 24 * (j_set - j_day) + 12;
-            var utc_time_rise = 24 * (j_rise - j_day) + 12;
-            var tz_offset = tz === undefined ? -1 * d.getTimezoneOffset() / 60 : tz;
-            var local_rise = (utc_time_rise + tz_offset) % 24;
-            var local_set = (utc_time_set + tz_offset) % 24;
-            local_rise *= 3600;
-            local_set *= 3600;
-            console.log(tz_offset, ':', local_rise / 60 / 60, local_rise / 60 % 60, local_set / 60 / 60, local_set / 60 % 60);
-            return [local_rise, local_set];
-        }
-
-
-        var night = [[12, 20, 50], [12, 20, 50], [12, 20, 50], [12, 20, 50], [12, 20, 50], [12, 20, 50]];
-        var night_dawn = [[73, 91, 114], [85, 101, 124], [99, 115, 130], [117, 129, 139], [140, 142, 139], [159, 139, 115]];
-        var dawn = [[134, 145, 160], [195, 194, 180], [245, 223, 177], [249, 212, 143], [244, 178, 109], [239, 127, 75]];
-        var dawn_day = [[143, 161, 184], [155, 171, 194], [169, 185, 200], [187, 199, 209], [210, 212, 209], [229, 209, 185]];
-        var day = [[78, 120, 196], [78, 120, 196], [78, 120, 196], [78, 120, 196], [78, 120, 196], [78, 120, 196]];
-        var day_dusk = [[103, 121, 144], [115, 131, 154], [129, 145, 160], [147, 159, 169], [170, 172, 169], [189, 169, 145]];
-        var dusk = [[134, 145, 160], [195, 194, 180], [245, 223, 177], [249, 212, 143], [244, 178, 109], [239, 127, 75]];
-        var dusk_night = [[8, 28, 65], [31, 51, 114], [50, 73, 146], [115, 123, 196], [172, 161, 201], [204, 189, 198]];
-
-
-        function BackgroundConfig(secs, rgbList, gradientPointList) {
-            this.secs = secs;
-            this.rgbList = rgbList;
-            this.gradientPointList = gradientPointList; // 长度必须是 rgbList.length - 2
-        }
-
-        var cacheDate = 0;
-        var sunriseSecond, sunsetSecond;
-        var backgroundConfigs = [];
-
-        function refreshCacheData(now, sunriseTime, sunsetTime, normalToChange, midToChange) {
-            if (cacheDate == 0 || cacheDate.getMonth() != now.getMonth() || cacheDate.getDate() != now.getDate()) {
-                cacheDate = now;
-                sunriseSecond = sunriseTime;
-                sunsetSecond = sunsetTime;
-
-                backgroundConfigs = [
-                    new BackgroundConfig(0, night, [20, 40, 60, 80]),
-
-                    new BackgroundConfig(sunriseSecond - normalToChange, night, [20, 40, 90, 95]),
-                    new BackgroundConfig(sunriseSecond - midToChange, night_dawn, [28, 45, 86, 92]),
-                    new BackgroundConfig(sunriseSecond, dawn, [46, 72, 86, 92]),
-                    new BackgroundConfig(sunriseSecond + midToChange, dawn_day, [20, 72, 86, 92]),
-                    new BackgroundConfig(sunriseSecond + normalToChange, day, [20, 72, 80, 87]),
-
-                    new BackgroundConfig(sunsetSecond - normalToChange, day, [20, 40, 60, 80]),
-                    new BackgroundConfig(sunsetSecond - midToChange, day_dusk, [20, 40, 60, 80]),
-                    new BackgroundConfig(sunsetSecond, dusk, [46, 72, 86, 92]),
-                    new BackgroundConfig(sunsetSecond + midToChange, dusk_night, [28, 72, 86, 92]),
-                    new BackgroundConfig(sunsetSecond + normalToChange, night, [28, 72, 90, 96]),
-
-                    new BackgroundConfig(24 * 3600, night, [20, 40, 60, 80]),
-                ];
-            }
-        }
-
-        function computeBackgroundV2(config1, config2, curSecs) {
-            var point = (curSecs * 1.0 - config1.secs) / (config2.secs * 1.0 - config1.secs);
-            var grad1 = config1.rgbList;
-            var grad2 = config2.rgbList;
-            var gradPt1 = config1.gradientPointList;
-            var gradPt2 = config2.gradientPointList;
-            var bg = "linear-gradient(to bottom, ";
-            for (var i = 0; i < grad1.length; i++) {
-                var red = Math.floor(grad1[i][0] + (grad2[i][0] - grad1[i][0]) * point);
-                var green = Math.floor(grad1[i][1] + (grad2[i][1] - grad1[i][1]) * point);
-                var blue = Math.floor(grad1[i][2] + (grad2[i][2] - grad1[i][2]) * point);
-                bg += "rgb(" + red + ", " + green + ", " + blue + ")";
-                if (i > 0 && i < grad1.length - 1) {
-                    bg += " " + Math.floor(gradPt1[i - 1] + (gradPt2[i - 1] - gradPt1[i - 1]) * point) + "%";
-                }
-                if (i < grad1.length - 1) {
-                    bg += ", ";
-                }
-            }
-            bg += ")";
-            return bg
-        }
-
-        function doChangeBackgroundV2(now, debug) {
-            var curSecs = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
-            var config1 = backgroundConfigs[0];
-            var config2 = backgroundConfigs[1];
-            for (var i = 1; i < backgroundConfigs.length - 1; i++) {
-                if (curSecs >= backgroundConfigs[i].secs) {
-                    config1 = backgroundConfigs[i];
-                    config2 = backgroundConfigs[i + 1];
-                } else {
-                    break;
-                }
-            }
-            var bg = computeBackgroundV2(config1, config2, curSecs);
-            if (debug) {
-                console.log(now, bg);
-            }
-
-            canvasBg.style.background = bg;
-            canvasBg2.style.background = bg;
-            globalNowSec = curSecs;
-
-            var offset = Math.floor(C_WIDTH*(globalNowSec/24/3600));
-            canvasBg.style.left = (offset-1) + "px";
-            canvasBg2.style.left = (-C_WIDTH + offset) + "px";
-        }
-
-        function changeBackgroundV2() {
-            var now = new Date();
-            var [sunriseTime, sunsetTime] = getSunRiseSetV2(now, 39.9, 116.5);
-            refreshCacheData(now, sunriseTime, sunsetTime, 30*60, 15*60);
-            doChangeBackgroundV2(now, false);
-        }
-
-        function simulate() {
-            var sunriseTime = 6*3600;
-            var sunsetTime = 18*3600;
-            var now = new Date();
-            cacheDate = 0;
-            refreshCacheData(now, sunriseTime, sunsetTime, 5*3600, 2.5*3600);
-
-            var simulateSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
-            setInterval(function () {
-                simulateSec = (simulateSec + 60) % (24 * 3600);
-                var dt = new Date(
-                    now.getFullYear(), now.getMonth(), now.getDate(),
-                    simulateSec / 3600, simulateSec % 3600 / 60, simulateSec % 60);
-                doChangeBackgroundV2(dt, true);
-            }, 10);
-        }
-
         function startMain() {
-            changeBackgroundV2();
+            // startSimulate(3000, 5);
 
-            var nowSec = new Date().getSeconds();
-            setTimeout(simulate, (nowSec - Math.floor(nowSec/10)*10)*1000);
-            // setInterval(changeBackgroundV2, 1000);
+            refreshAll();
+            animateSkyObjectsV5(sun, moon, arrStars, ()=>globalVars);
 
-            animate();
+            setTimeout(refreshAll, refreshIntervalInMs);
 
             document.oncontextmenu = (e) => {
                 e.preventDefault()
