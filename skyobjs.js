@@ -104,6 +104,9 @@ function createStars(ctxList, num, rRand, rBase, twinking) {
 const C_REF_SUN_MID_WINTER = new Date(Date.UTC(2023, 11, 22, 12, 0));
 const C_SUN_YEAR_MS = 365.242199*24*60*60*1000;
 
+const C_SUN_NORMAL_COLOR = [0xff, 0xee, 0xee];
+const C_SUN_WARM_COLOR = [0xff, 0xdd, 0x66];
+
 class Sun {
     constructor(ctxList, posAngle, posRadius, r, color) {
         this.ctxList = ctxList;
@@ -133,7 +136,7 @@ class Sun {
         }
     }
 
-    update(nowAngleOffset, dt, sunriseSec) {
+    update(nowAngleOffset, dt, sunriseSec, sunsetSec, normalSec, midSec) {
         this.posAngle = nowAngleOffset + 0.5*Math.PI;
 
         const offsetRatio = (dt - C_REF_SUN_MID_WINTER) % C_SUN_YEAR_MS / C_SUN_YEAR_MS;
@@ -149,6 +152,20 @@ class Sun {
 
         this.x = this.orbitX + this.posRadius * Math.cos(this.posAngle);
         this.y = this.orbitY + this.posRadius * Math.sin(this.posAngle);
+
+        var colorWarmRatio = 0;
+        const nowSec = dt.getHours()*3600 + dt.getMinutes()*60 + dt.getSeconds();
+        if (nowSec < sunriseSec || nowSec > sunsetSec) {
+            colorWarmRatio = 1;
+        } else if (nowSec < sunriseSec + midSec) {
+            colorWarmRatio = 1 - (nowSec - sunriseSec) / midSec;
+        } else if (nowSec > sunsetSec - normalSec) {
+            colorWarmRatio = 1 - (sunsetSec - nowSec) / normalSec;
+        }
+        this.color = arrToRGB([
+            C_SUN_NORMAL_COLOR[0]*(1-colorWarmRatio) + C_SUN_WARM_COLOR[0]*colorWarmRatio,
+            C_SUN_NORMAL_COLOR[1]*(1-colorWarmRatio) + C_SUN_WARM_COLOR[1]*colorWarmRatio,
+            C_SUN_NORMAL_COLOR[2]*(1-colorWarmRatio) + C_SUN_WARM_COLOR[2]*colorWarmRatio]);
     }
 
     isVisible() {
@@ -214,7 +231,7 @@ class Sun {
 }
 
 function createSun(ctxList) {
-    var sun = new Sun(ctxList, 0, C_SUN_ORBIT_RADIUS, C_SUN_RADIUS, "#ffeeee");
+    var sun = new Sun(ctxList, 0, C_SUN_ORBIT_RADIUS, C_SUN_RADIUS,arrToRGB(C_SUN_NORMAL_COLOR));
     return sun;
 }
 
@@ -317,23 +334,23 @@ class Moon {
     updateColor(dt, sunriseSec, sunsetSec, normalSec, midSec) {
         const nowSec = dt.getHours()*3600 + dt.getMinutes()*60 + dt.getSeconds();
         if (nowSec < sunriseSec + midSec) {
-            this.color = "rgb(" + C_MOON_NIGHT_COLOR[0] + ", " + C_MOON_NIGHT_COLOR[1] + ", " + C_MOON_NIGHT_COLOR[2] + ")";
+            this.color = arrToRGB(C_MOON_NIGHT_COLOR);
         } else if (nowSec < sunriseSec + normalSec) {
             const ratio = (nowSec - sunriseSec - midSec) / midSec;
             const redColor = C_MOON_NIGHT_COLOR[0] + (C_MOON_DAY_COLOR[0] - C_MOON_NIGHT_COLOR[0]) * ratio;
             const greenColor = C_MOON_NIGHT_COLOR[1] + (C_MOON_DAY_COLOR[1] - C_MOON_NIGHT_COLOR[1]) * ratio;
             const blueColor = C_MOON_NIGHT_COLOR[2] + (C_MOON_DAY_COLOR[2] - C_MOON_NIGHT_COLOR[2]) * ratio;
-            this.color = "rgb(" + redColor + ", " + greenColor + ", " + blueColor + ")";
+            this.color = arrToRGB([redColor, greenColor, blueColor]);
         } else if (nowSec < sunsetSec - midSec - 2*normalSec) {
-            this.color = "rgb(" + C_MOON_DAY_COLOR[0] + ", " + C_MOON_DAY_COLOR[1] + ", " + C_MOON_DAY_COLOR[2] + ")";
+            this.color = arrToRGB(C_MOON_DAY_COLOR);
         } else if (nowSec < sunsetSec - midSec) {
             const ratio = (nowSec - sunsetSec + midSec + 2*normalSec) / normalSec / 2;
             const redColor = C_MOON_DAY_COLOR[0] + (C_MOON_NIGHT_COLOR[0] - C_MOON_DAY_COLOR[0]) * ratio;
             const greenColor = C_MOON_DAY_COLOR[1] + (C_MOON_NIGHT_COLOR[1] - C_MOON_DAY_COLOR[1]) * ratio;
             const blueColor = C_MOON_DAY_COLOR[2] + (C_MOON_NIGHT_COLOR[2] - C_MOON_DAY_COLOR[2]) * ratio;
-            this.color = "rgb(" + redColor + ", " + greenColor + ", " + blueColor + ")";
+            this.color = arrToRGB([redColor, greenColor, blueColor]);
         } else {
-            this.color = "rgb(" + C_MOON_NIGHT_COLOR[0] + ", " + C_MOON_NIGHT_COLOR[1] + ", " + C_MOON_NIGHT_COLOR[2] + ")";
+            this.color = arrToRGB(C_MOON_NIGHT_COLOR);
         }
     }
 
@@ -391,8 +408,12 @@ function animateSkyObjectsV5(sun, moon, stars, varsGetter) {
     for (var i = 0; i < stars.length; i++) {
         stars[i].update(vars.globalNowAngleOffset);
     }
-    sun.update(vars.globalNowAngleOffset, new Date(vars.globalNowSec*1000), vars.sunriseSec);
-    moon.update(vars.globalNowAngleOffset, new Date(vars.globalNowSec*1000), vars.sunriseSec, vars.sunsetSec, vars.normalToChangeInSecs, vars.midToChangeInSecs);
+
+    sun.update(vars.globalNowAngleOffset, new Date(vars.globalNowSec*1000), vars.sunriseSec,
+        vars.sunsetSec, vars.normalToChangeInSecs, vars.midToChangeInSecs);
+
+    moon.update(vars.globalNowAngleOffset, new Date(vars.globalNowSec*1000), vars.sunriseSec,
+        vars.sunsetSec, vars.normalToChangeInSecs, vars.midToChangeInSecs);
 
     context.clearRect(0, 0, C_WIDTH, C_HEIGHT);
     for (var i = 0; i < stars.length; i++) {
