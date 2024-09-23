@@ -54,6 +54,7 @@ class Star {
         this.rChange = 0.03 * (Math.random() * 0.2 + 0.9);
         this.color = color;
         this.alpha = 1;
+        this.normalColor = arrToRGB(color);
         this.shouldTwinking = twinking;
     }
 
@@ -70,7 +71,7 @@ class Star {
             ctx.arc(this.x, this.y, this.r, 0, 2 * Math.PI, false);
             ctx.shadowBlur = this.r * 10;
             ctx.shadowColor = "white";
-            ctx.fillStyle = arrToRGBA([this.color[0], this.color[1], this.color[2], this.alpha]);
+            ctx.fillStyle = this.alpha < 1 ? arrToRGBA([this.color[0], this.color[1], this.color[2], this.alpha]) : this.normalColor;
             ctx.fill();
         }
     }
@@ -113,7 +114,7 @@ class Star {
 
 function randomStarColor() {
     var arrColors = [[0xff, 0xff, 0xff], [0xff, 0xec, 0xd3], [0xbf, 0xcf, 0xff]];
-    return "#" + arrColors[Math.floor((Math.random() * 3))];
+    return arrColors[Math.floor((Math.random() * 3))];
 }
 
 function createStars(ctxList, num, rRand, rBase, twinking) {
