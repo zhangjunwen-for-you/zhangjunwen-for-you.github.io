@@ -3,8 +3,17 @@ const C_SKY_CENTER_X = C_WIDTH/2;
 const C_SKY_CENTER_Y = C_HEIGHT*1.2;
 const C_SKY_MAX_RADIUS = Math.sqrt(Math.pow(C_SKY_CENTER_Y, 2) + Math.pow(C_SKY_CENTER_X, 2));
 const C_SKY_MIN_RADIUS = Math.max(0, C_SKY_CENTER_Y - C_HEIGHT);
-const C_REDIST_FACTOR_NEAR_QUADRATIC = 0.4;
 const C_MAX_MOVE_ON_X = 50;
+
+const C_SUN_RADIUS = 30;
+const C_MOON_RADIUS = 25;
+
+const C_ORBIT_SEASON_ADJUST = 0.3;
+
+const C_SUN_ORBIT_RADIUS = C_HEIGHT - C_SUN_RADIUS;
+const C_MOON_ORBIT_RADIUS = C_HEIGHT - C_MOON_RADIUS;
+
+const C_SUN_MOON_ORBIT_BASE = C_HEIGHT - Math.cos(Math.PI - C_2PI*(4*3600+45*60)/C_ONE_DAY_SECS) * C_SUN_ORBIT_RADIUS * C_ORBIT_SEASON_ADJUST;
 
 /****************************************/
 /*************** Star *******************/
@@ -95,9 +104,6 @@ function createStars(ctxList, num, rRand, rBase, twinking) {
 const C_REF_SUN_MID_WINTER = new Date(Date.UTC(2023, 11, 22, 12, 0));
 const C_SUN_YEAR_MS = 365.242199*24*60*60*1000;
 
-const C_SUN_RADIUS = 30;
-const C_SUN_ORBIT_RADIUS = C_HEIGHT - 2*C_SUN_RADIUS - 1;
-
 class Sun {
     constructor(ctxList, posAngle, posRadius, r, color) {
         this.ctxList = ctxList;
@@ -139,7 +145,7 @@ class Sun {
         const bias = offsetRatio > 0.25 && offsetRatio < 0.75 ? 1 : 2;
         this.orbitX = C_SKY_CENTER_X - Math.sin(2*offsetRatio*C_2PI) * C_MAX_MOVE_ON_X * bias;
 
-        this.orbitY = C_HEIGHT + Math.cos(Math.PI - C_2PI*sunriseSec/C_ONE_DAY_SECS) * C_SUN_ORBIT_RADIUS;
+        this.orbitY = C_SUN_MOON_ORBIT_BASE + Math.cos(Math.PI - C_2PI*sunriseSec/C_ONE_DAY_SECS) * C_SUN_ORBIT_RADIUS * C_ORBIT_SEASON_ADJUST;
 
         this.x = this.orbitX + this.posRadius * Math.cos(this.posAngle);
         this.y = this.orbitY + this.posRadius * Math.sin(this.posAngle);
@@ -218,13 +224,11 @@ function createSun(ctxList) {
 
 const C_REF_NEW_MOON = new Date(Date.UTC(2000, 0, 6, 18, 14));
 const C_LUNAR_MONTH_MS = 29.53*C_ONE_DAY_MS;
-const C_INITAL_ANGLE_FOR_NEW_MOON = 1.25*C_2PI;
+const C_INITAL_ANGLE_FOR_NEW_MOON = 0.5*Math.PI;
+const C_INITIAL_ROTATE_FOR_NEW_MOON = Math.PI; // 新月18点的时候的旋转角度是90度，那么0点的时候的旋转角度是90-270=-180度，等价于180度
 
 const C_MOON_DAY_COLOR = [193, 208, 240];
 const C_MOON_NIGHT_COLOR = [240, 240, 240];
-
-const C_MOON_RADIUS = 25;
-const C_MOON_ORBIT_RADIUS = C_HEIGHT - 2*C_MOON_RADIUS - 1;
 
 class Moon {
     constructor(ctxList, posAngle, posRadius, r, color) {
@@ -284,19 +288,14 @@ class Moon {
     }
 
     update(nowAngleOffset, dt, sunriseSec, sunsetSec, normalSec, midSec) {;
-        var diffInMs = dt - C_REF_NEW_MOON;
+        const diffInMs = dt - C_REF_NEW_MOON;
         // lunar phase: 0.5 for full moon, 0/1 for new moon, 0~0.5 for waxing, 0.5~1 for waning
         this.phase = diffInMs % C_LUNAR_MONTH_MS / C_LUNAR_MONTH_MS;
-        var initialAngle = C_INITAL_ANGLE_FOR_NEW_MOON - C_2PI * this.phase;
+        const phaseAngle = C_2PI * this.phase;
+        const initialAngle = C_INITAL_ANGLE_FOR_NEW_MOON - phaseAngle;
         this.posAngle = nowAngleOffset + initialAngle;
-        /**
-         * 计算依据：
-         * 以新月为例，当月亮运行到晚上18点的时候，其旋转角度应当为0.25*PI
-         * 而从月亮的当日0点的起始位置运行到18点，需要旋转 1.75*PI - initialAngle
-         * 也就是说，月亮当日0点的旋转角度是 0.25*PI - (1.75*PI - initialAngle)
-         * 即 initialAngle - 1.5*PI = initialAngle + 0.5*PI
-         */
-        const initialRotate = initialAngle + 0.5*Math.PI;
+
+        const initialRotate = C_INITIAL_ROTATE_FOR_NEW_MOON - phaseAngle;
         this.rotate = initialRotate + nowAngleOffset;
 
         this.updateColor(dt, sunriseSec, sunsetSec, normalSec, midSec);
@@ -305,7 +304,7 @@ class Moon {
         const bias = this.phase > 0.25 && this.phase < 0.75 ? 1 : 2;
         this.orbitX = C_SKY_CENTER_X + Math.sin(2*this.phase*C_2PI) * C_MAX_MOVE_ON_X * bias;
 
-        this.orbitY = C_HEIGHT - Math.cos(Math.PI - C_2PI*sunriseSec/C_ONE_DAY_SECS) * C_MOON_ORBIT_RADIUS;
+        this.orbitY = C_SUN_MOON_ORBIT_BASE - Math.cos(Math.PI - C_2PI*sunriseSec/C_ONE_DAY_SECS) * C_MOON_ORBIT_RADIUS * C_ORBIT_SEASON_ADJUST;
 
         this.x = this.orbitX + this.posRadius * Math.cos(this.posAngle);
         this.y = this.orbitY + this.posRadius * Math.sin(this.posAngle);
@@ -388,7 +387,7 @@ function animateSkyObjects(sun, moon, stars, varsGetter) {
 
 function animateSkyObjectsV5(sun, moon, stars, varsGetter) {
     var vars = varsGetter();
-    // vars.globalNowAngleOffset = Math.PI;
+    // vars.globalNowAngleOffset = 0;
     for (var i = 0; i < stars.length; i++) {
         stars[i].update(vars.globalNowAngleOffset);
     }
