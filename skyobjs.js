@@ -254,6 +254,7 @@ class Moon {
         this.posRadius = posRadius;
         this.r = r;
         this.color = color;
+        this.alpha = 1;
         this.phase = 0;
         this.rotate = 0;
         this.blurNormalRadius = 20;
@@ -264,8 +265,12 @@ class Moon {
         this.y = this.orbitY + this.posRadius * Math.sin(this.posAngle);
     }
 
+    isVisible() {
+        return this.x > -this.r*2 && this.x < C_WIDTH + this.r*2 && this.y > -this.r*2 && this.y < C_HEIGHT + this.r*2;
+    }
+
     render() {
-        if (this.x < -this.r*2 || this.x > C_WIDTH + this.r*2 || this.y < -this.r*2 || this.y > C_HEIGHT + this.r*2) {
+        if (!this.isVisible()) {
             return;
         }
         const adjustedPhase = this.phase*4;
@@ -290,6 +295,7 @@ class Moon {
         const arcEnd = arcStart + Math.PI;
         const ellipseStart = arcEnd;
         const ellipseEnd = arcStart;
+        const fillColor = arrToRGBA([this.color[0], this.color[1], this.color[2], this.alpha]);
         for (var ind in this.ctxList) {
             var ctx = this.ctxList[ind];
             ctx.beginPath();
@@ -298,13 +304,13 @@ class Moon {
             ctx.closePath();
 
             ctx.shadowBlur = this.blurNormalRadius*this.blurFactor;
-            ctx.shadowColor = this.color;
-            ctx.fillStyle = this.color;
+            ctx.shadowColor = fillColor;
+            ctx.fillStyle = fillColor;
             ctx.fill();
         }
     }
 
-    update(nowAngleOffset, dt, sunriseSec, sunsetSec, normalSec, midSec) {;
+    update(nowAngleOffset, dt, sunriseSec, sunsetSec, normalSec, midSec) {
         const diffInMs = dt - C_REF_NEW_MOON;
         // lunar phase: 0.5 for full moon, 0/1 for new moon, 0~0.5 for waxing, 0.5~1 for waning
         this.phase = diffInMs % C_LUNAR_MONTH_MS / C_LUNAR_MONTH_MS;
@@ -316,7 +322,7 @@ class Moon {
         this.rotate = initialRotate + nowAngleOffset;
 
         this.updateColor(dt, sunriseSec, sunsetSec, normalSec, midSec);
-        this.updateBlur(dt, sunriseSec, sunsetSec, normalSec, midSec);
+        this.updateBlur(dt, sunriseSec, sunsetSec, normalSec);
 
         const bias = this.phase > 0.25 && this.phase < 0.75 ? 1 : 2;
         this.orbitX = C_SKY_CENTER_X + Math.sin(2*this.phase*C_2PI) * C_MAX_MOVE_ON_X * bias;
@@ -332,29 +338,35 @@ class Moon {
     }
 
     updateColor(dt, sunriseSec, sunsetSec, normalSec, midSec) {
+        if (!this.isVisible()) {
+            return;
+        }
         const nowSec = dt.getHours()*3600 + dt.getMinutes()*60 + dt.getSeconds();
         if (nowSec < sunriseSec + midSec) {
-            this.color = arrToRGB(C_MOON_NIGHT_COLOR);
+            this.color =C_MOON_NIGHT_COLOR;
         } else if (nowSec < sunriseSec + normalSec) {
             const ratio = (nowSec - sunriseSec - midSec) / midSec;
             const redColor = C_MOON_NIGHT_COLOR[0] + (C_MOON_DAY_COLOR[0] - C_MOON_NIGHT_COLOR[0]) * ratio;
             const greenColor = C_MOON_NIGHT_COLOR[1] + (C_MOON_DAY_COLOR[1] - C_MOON_NIGHT_COLOR[1]) * ratio;
             const blueColor = C_MOON_NIGHT_COLOR[2] + (C_MOON_DAY_COLOR[2] - C_MOON_NIGHT_COLOR[2]) * ratio;
-            this.color = arrToRGB([redColor, greenColor, blueColor]);
+            this.color = [redColor, greenColor, blueColor];
         } else if (nowSec < sunsetSec - midSec - 2*normalSec) {
-            this.color = arrToRGB(C_MOON_DAY_COLOR);
+            this.color = C_MOON_DAY_COLOR;
         } else if (nowSec < sunsetSec - midSec) {
             const ratio = (nowSec - sunsetSec + midSec + 2*normalSec) / normalSec / 2;
             const redColor = C_MOON_DAY_COLOR[0] + (C_MOON_NIGHT_COLOR[0] - C_MOON_DAY_COLOR[0]) * ratio;
             const greenColor = C_MOON_DAY_COLOR[1] + (C_MOON_NIGHT_COLOR[1] - C_MOON_DAY_COLOR[1]) * ratio;
             const blueColor = C_MOON_DAY_COLOR[2] + (C_MOON_NIGHT_COLOR[2] - C_MOON_DAY_COLOR[2]) * ratio;
-            this.color = arrToRGB([redColor, greenColor, blueColor]);
+            this.color = [redColor, greenColor, blueColor];
         } else {
-            this.color = arrToRGB(C_MOON_NIGHT_COLOR);
+            this.color = C_MOON_NIGHT_COLOR;
         }
     }
 
-    updateBlur(dt, sunriseSec, sunsetSec, normalSec, midSec) {
+    updateBlur(dt, sunriseSec, sunsetSec, normalSec) {
+        if (!this.isVisible()) {
+            return;
+        }
         const nowSec = dt.getHours()*3600 + dt.getMinutes()*60 + dt.getSeconds();
         if (nowSec < sunriseSec - normalSec) {
             this.blurFactor = 1;
@@ -370,6 +382,24 @@ class Moon {
             this.blurFactor = 1;
         }
         this.blurNormalRadius = (this.phase < 0.5 ? 5 + 30*this.phase : 35 - 30*this.phase);
+    }
+
+    updateAlphaAccordingToSun(sun) {
+        this.alpha = 1;
+        if (!sun.isVisible()) {
+            return;
+        }
+        if (!this.isVisible()) {
+            return;
+        }
+        const distToSun = Math.sqrt(Math.pow(this.x - sun.x, 2) + Math.pow(this.y - sun.y, 2));
+        const invisibleDist = sun.r + 2*this.r;
+        const invisibleBeginDist = 3*this.r;
+        if (distToSun > invisibleBeginDist + invisibleDist) {
+            return;
+        }
+        const ratio = (distToSun - invisibleDist)/invisibleBeginDist;
+        this.alpha = Math.max(0, ratio);
     }
 }
 
@@ -414,6 +444,7 @@ function animateSkyObjectsV5(sun, moon, stars, varsGetter) {
 
     moon.update(vars.globalNowAngleOffset, new Date(vars.globalNowSec*1000), vars.sunriseSec,
         vars.sunsetSec, vars.normalToChangeInSecs, vars.midToChangeInSecs);
+    moon.updateAlphaAccordingToSun(sun);
 
     context.clearRect(0, 0, C_WIDTH, C_HEIGHT);
     for (var i = 0; i < stars.length; i++) {
