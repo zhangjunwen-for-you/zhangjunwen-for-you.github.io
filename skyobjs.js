@@ -4,8 +4,7 @@ const C_SKY_CENTER_Y = C_HEIGHT*1.2;
 const C_SKY_MAX_RADIUS = Math.sqrt(Math.pow(C_SKY_CENTER_Y, 2) + Math.pow(C_SKY_CENTER_X, 2));
 const C_SKY_MIN_RADIUS = Math.max(0, C_SKY_CENTER_Y - C_HEIGHT);
 const C_REDIST_FACTOR_NEAR_QUADRATIC = 0.4;
-const C_LUNAR_MONTH_MS = 29.53*C_ONE_DAY_MS;
-const C_INITAL_ANGLE_FOR_NEW_MOON = 1.25*C_2PI;
+const C_MAX_MOVE_ON_X = 50;
 
 /****************************************/
 /*************** Star *******************/
@@ -93,6 +92,9 @@ function createStars(ctxList, num, rRand, rBase, twinking) {
 /*************** Sun *******************/
 /***************************************/
 
+const C_REF_SUN_MID_WINTER = new Date(Date.UTC(2023, 11, 22, 12, 0));
+const C_SUN_YEAR_MS = 365.242199*24*60*60*1000;
+
 const C_SUN_RADIUS = 30;
 const C_SUN_ORBIT_RADIUS = C_HEIGHT - 2*C_SUN_RADIUS - 1;
 
@@ -103,6 +105,7 @@ class Sun {
         this.posRadius = posRadius;
         this.r = r;
         this.color = color;
+        this.orbitX = C_SKY_CENTER_X;
         this.orbitY = C_HEIGHT;
         this.x = C_SKY_CENTER_X + this.posRadius * Math.cos(this.posAngle);
         this.y = this.orbitY + this.posRadius * Math.sin(this.posAngle);
@@ -124,11 +127,21 @@ class Sun {
         }
     }
 
-    update(nowAngleOffset, sunriseSec) {
+    update(nowAngleOffset, dt, sunriseSec) {
         this.posAngle = nowAngleOffset + 0.5*Math.PI;
+
+        const offsetRatio = (dt - C_REF_SUN_MID_WINTER) % C_SUN_YEAR_MS / C_SUN_YEAR_MS;
+        // 一年中的每天的同一时刻，太阳形成的轨迹呈现8字形
+        // 冬至 -> 春分：冬至最低，先向东偏移，再向西偏移，大约春分回到中间
+        // 春分 -> 夏至：然后向西偏移，再向东偏移，到夏至最高
+        // 夏至 -> 秋分：夏至最高，先向东偏移，再向西偏移，大约秋分回到中间
+        // 秋分 -> 冬至：然后向西偏移，再向东偏移，到冬至最低
+        const bias = offsetRatio > 0.25 && offsetRatio < 0.75 ? 1 : 2;
+        this.orbitX = C_SKY_CENTER_X - Math.sin(2*offsetRatio*C_2PI) * C_MAX_MOVE_ON_X * bias;
+
         this.orbitY = C_HEIGHT + Math.cos(Math.PI - C_2PI*sunriseSec/C_ONE_DAY_SECS) * C_SUN_ORBIT_RADIUS;
 
-        this.x = C_SKY_CENTER_X + this.posRadius * Math.cos(this.posAngle);
+        this.x = this.orbitX + this.posRadius * Math.cos(this.posAngle);
         this.y = this.orbitY + this.posRadius * Math.sin(this.posAngle);
     }
 
@@ -148,8 +161,6 @@ class Sun {
         if (!this.isVisible() || !this.isEclips(moon)) {
             return;
         }
-
-        this.render();
 
         const dist = Math.sqrt(Math.pow(this.x - moon.x, 2) + Math.pow(this.y - moon.y, 2));
         if (dist <= this.r - moon.r) {
@@ -206,8 +217,12 @@ function createSun(ctxList) {
 /****************************************/
 
 const C_REF_NEW_MOON = new Date(Date.UTC(2000, 0, 6, 18, 14));
+const C_LUNAR_MONTH_MS = 29.53*C_ONE_DAY_MS;
+const C_INITAL_ANGLE_FOR_NEW_MOON = 1.25*C_2PI;
+
 const C_MOON_DAY_COLOR = [193, 208, 240];
 const C_MOON_NIGHT_COLOR = [240, 240, 240];
+
 const C_MOON_RADIUS = 25;
 const C_MOON_ORBIT_RADIUS = C_HEIGHT - 2*C_MOON_RADIUS - 1;
 
@@ -222,6 +237,7 @@ class Moon {
         this.rotate = 0;
         this.blurNormalRadius = 20;
         this.blurFactor = 1;
+        this.orbitX = C_SKY_CENTER_X;
         this.orbitY = C_HEIGHT;
         this.x = C_SKY_CENTER_X + this.posRadius * Math.cos(this.posAngle);
         this.y = this.orbitY + this.posRadius * Math.sin(this.posAngle);
@@ -286,8 +302,12 @@ class Moon {
         this.updateColor(dt, sunriseSec, sunsetSec, normalSec, midSec);
         this.updateBlur(dt, sunriseSec, sunsetSec, normalSec, midSec);
 
+        const bias = this.phase > 0.25 && this.phase < 0.75 ? 1 : 2;
+        this.orbitX = C_SKY_CENTER_X + Math.sin(2*this.phase*C_2PI) * C_MAX_MOVE_ON_X * bias;
+
         this.orbitY = C_HEIGHT - Math.cos(Math.PI - C_2PI*sunriseSec/C_ONE_DAY_SECS) * C_MOON_ORBIT_RADIUS;
-        this.x = C_SKY_CENTER_X + this.posRadius * Math.cos(this.posAngle);
+
+        this.x = this.orbitX + this.posRadius * Math.cos(this.posAngle);
         this.y = this.orbitY + this.posRadius * Math.sin(this.posAngle);
 
         if (dt.getHours() == 0) {
@@ -368,10 +388,11 @@ function animateSkyObjects(sun, moon, stars, varsGetter) {
 
 function animateSkyObjectsV5(sun, moon, stars, varsGetter) {
     var vars = varsGetter();
+    // vars.globalNowAngleOffset = Math.PI;
     for (var i = 0; i < stars.length; i++) {
         stars[i].update(vars.globalNowAngleOffset);
     }
-    sun.update(vars.globalNowAngleOffset, vars.sunriseSec);
+    sun.update(vars.globalNowAngleOffset, new Date(vars.globalNowSec*1000), vars.sunriseSec);
     moon.update(vars.globalNowAngleOffset, new Date(vars.globalNowSec*1000), vars.sunriseSec, vars.sunsetSec, vars.normalToChangeInSecs, vars.midToChangeInSecs);
 
     context.clearRect(0, 0, C_WIDTH, C_HEIGHT);
@@ -382,10 +403,10 @@ function animateSkyObjectsV5(sun, moon, stars, varsGetter) {
         }
         stars[i].render();
     }
+    sun.render();
     if (sun.isEclips(moon)) {
         sun.renderEclips(moon);
     } else {
-        sun.render();
         moon.render();
     }
     requestAnimationFrame(animateSkyObjectsV5.bind(null, sun, moon, stars, varsGetter));
