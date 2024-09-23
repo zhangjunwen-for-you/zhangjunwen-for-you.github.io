@@ -24,7 +24,7 @@ function alphaAccordingToOther(x, y, otherX, otherY, invisibleDist, invisibleBeg
     if (distToSun > invisibleBeginDist + invisibleDist) {
         return 1;
     }
-    const ratio = (distToSun - invisibleDist)/(invisibleBeginDist - invisibleDist);
+    const ratio = (distToSun - invisibleDist)/invisibleBeginDist;
     return Math.max(0, ratio);
 }
 
@@ -106,7 +106,7 @@ class Star {
 
     updateAlphaAccordingTo(sun, moon) {
         const moonFactor = 1 - Math.abs(moon.phase - 0.5)/0.5;
-        const alpha1 = this.getAlphaAccordingToObj(moon, moon.r*(1+0.5*moonFactor), moon.r*(1+1.5*moonFactor));
+        const alpha1 = this.getAlphaAccordingToObj(moon, moon.r*(1+0.5*moonFactor), moon.r*(0.1+2*moonFactor));
         const alpha2 = this.getAlphaAccordingToObj(sun, sun.r*2, sun.r*4);
         this.alpha = Math.min(alpha1, alpha2);
     }
