@@ -16,6 +16,19 @@ const C_MOON_ORBIT_RADIUS = C_HEIGHT - C_MOON_RADIUS;
 const C_SUN_MOON_ORBIT_BASE = C_HEIGHT - Math.cos(Math.PI - C_2PI*(4*3600+45*60)/C_ONE_DAY_SECS) * C_SUN_ORBIT_RADIUS * C_ORBIT_SEASON_ADJUST;
 
 /****************************************/
+/*************** Util *******************/
+/****************************************/
+
+function alphaAccordingToOther(x, y, otherX, otherY, invisibleDist, invisibleBeginDist) {
+    const distToSun = Math.sqrt(Math.pow(x - otherX, 2) + Math.pow(y - otherY, 2));
+    if (distToSun > invisibleBeginDist + invisibleDist) {
+        return 1;
+    }
+    const ratio = (distToSun - invisibleDist)/(invisibleBeginDist - invisibleDist);
+    return Math.max(0, ratio);
+}
+
+/****************************************/
 /*************** Star *******************/
 /****************************************/
 
@@ -40,11 +53,15 @@ class Star {
 
         this.rChange = 0.03 * (Math.random() * 0.2 + 0.9);
         this.color = color;
+        this.alpha = 1;
         this.shouldTwinking = twinking;
     }
 
     render() {
         if (this.x < 0 || this.x > C_WIDTH || this.y < 0 || this.y > C_HEIGHT) {
+            return;
+        }
+        if (this.alpha <= 1e-6) {
             return;
         }
         for (var ind in this.ctxList) {
@@ -53,7 +70,7 @@ class Star {
             ctx.arc(this.x, this.y, this.r, 0, 2 * Math.PI, false);
             ctx.shadowBlur = this.r * 10;
             ctx.shadowColor = "white";
-            ctx.fillStyle = this.color;
+            ctx.fillStyle = arrToRGBA([this.color[0], this.color[1], this.color[2], this.alpha]);
             ctx.fill();
         }
     }
@@ -75,10 +92,27 @@ class Star {
             this.r += this.rChange * (Math.random() * 0.2 + 0.8);
         }
     }
+
+    getAlphaAccordingToObj(obj, invisibleDist, invisibleBeginDist) {
+        if (!obj.isVisible()) {
+            return 1;
+        }
+        if (Math.abs(this.x - obj.x) > invisibleBeginDist || Math.abs(this.y - obj.y) > invisibleBeginDist) {
+            return 1;
+        }
+        return alphaAccordingToOther(this.x, this.y, obj.x, obj.y, invisibleDist, invisibleBeginDist);
+    }
+
+    updateAlphaAccordingTo(sun, moon) {
+        const moonFactor = 1 - Math.abs(moon.phase - 0.5)/0.5;
+        const alpha1 = this.getAlphaAccordingToObj(moon, moon.r*(1+0.5*moonFactor), moon.r*(1+1.5*moonFactor));
+        const alpha2 = this.getAlphaAccordingToObj(sun, sun.r*2, sun.r*4);
+        this.alpha = Math.min(alpha1, alpha2);
+    }
 }
 
 function randomStarColor() {
-    var arrColors = ["ffffff", "ffecd3", "bfcfff"];
+    var arrColors = [[0xff, 0xff, 0xff], [0xff, 0xec, 0xd3], [0xbf, 0xcf, 0xff]];
     return "#" + arrColors[Math.floor((Math.random() * 3))];
 }
 
@@ -392,14 +426,9 @@ class Moon {
         if (!this.isVisible()) {
             return;
         }
-        const distToSun = Math.sqrt(Math.pow(this.x - sun.x, 2) + Math.pow(this.y - sun.y, 2));
         const invisibleDist = sun.r + 2*this.r;
         const invisibleBeginDist = 3*this.r;
-        if (distToSun > invisibleBeginDist + invisibleDist) {
-            return;
-        }
-        const ratio = (distToSun - invisibleDist)/invisibleBeginDist;
-        this.alpha = Math.max(0, ratio);
+        this.alpha = alphaAccordingToOther(this.x, this.y, sun.x, sun.y, invisibleDist, invisibleBeginDist);
     }
 }
 
@@ -435,9 +464,6 @@ function animateSkyObjects(sun, moon, stars, varsGetter) {
 function animateSkyObjectsV5(sun, moon, stars, varsGetter) {
     var vars = varsGetter();
     // vars.globalNowAngleOffset = 0;
-    for (var i = 0; i < stars.length; i++) {
-        stars[i].update(vars.globalNowAngleOffset);
-    }
 
     sun.update(vars.globalNowAngleOffset, new Date(vars.globalNowSec*1000), vars.sunriseSec,
         vars.sunsetSec, vars.normalToChangeInSecs, vars.midToChangeInSecs);
@@ -446,12 +472,13 @@ function animateSkyObjectsV5(sun, moon, stars, varsGetter) {
         vars.sunsetSec, vars.normalToChangeInSecs, vars.midToChangeInSecs);
     moon.updateAlphaAccordingToSun(sun);
 
+    for (var i = 0; i < stars.length; i++) {
+        stars[i].update(vars.globalNowAngleOffset);
+        stars[i].updateAlphaAccordingTo(sun, moon);
+    }
+
     context.clearRect(0, 0, C_WIDTH, C_HEIGHT);
     for (var i = 0; i < stars.length; i++) {
-        const distToMoon = Math.sqrt(Math.pow(stars[i].x - moon.x, 2) + Math.pow(stars[i].y - moon.y, 2));
-        if (distToMoon < moon.r + stars[i].r) {
-            continue;
-        }
         stars[i].render();
     }
     sun.render();
