@@ -71,7 +71,7 @@ class Star {
             ctx.arc(this.x, this.y, this.r, 0, 2 * Math.PI, false);
             ctx.shadowBlur = this.r * 10;
             ctx.shadowColor = "white";
-            ctx.fillStyle = this.alpha < 1 ? arrToRGBA([this.color[0], this.color[1], this.color[2], this.alpha]) : this.normalColor;
+            ctx.fillStyle = this.alpha < 0.99 ? arrToRGBA([this.color[0], this.color[1], this.color[2], this.alpha]) : this.normalColor;
             ctx.fill();
         }
     }
