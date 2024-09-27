@@ -30,8 +30,9 @@ def speech_to_text_baidu(audio):
         parsed, 'pcm', 16000, {
         'dev_pid': 1537,  # 识别普通话，使用输入法模型
     })
-
-    return result.get('result', [''])[0], f'<error> {result["err_msg"]} </error>' if 'success' not in result['err_msg'] else None
+    print(result)
+    err_msg = result.get('err_msg', '') or result.get('error_msg', '')
+    return result.get('result', [''])[0], f'<error> {err_msg} </error>' if 'success' not in err_msg else None
 
 
 def long_running_listen(recognizer, aud_source):
