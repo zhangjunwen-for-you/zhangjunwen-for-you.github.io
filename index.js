@@ -11,10 +11,7 @@ arrStars.push(...createStars([context], 202, 0.3, .3, false));
 
 var cacheDate = 0;
 function refreshAll() {
-    const actualNow = new Date();
-    const actualDiffInMs = actualNow - initialTime;
-    const usingDiffInMs = actualDiffInMs*tickUnitInMs;
-    const usingNow = new Date(initialTime + usingDiffInMs);
+    const usingNow = new Date(globalVars.globalNowSec*1000 + tickUnitInMs);
 
     var [sunriseTime, sunsetTime] = getSunRiseSetV2(usingNow, 39.9, 116.5);
     const maxSpeedForExchange = 6000;
@@ -85,29 +82,49 @@ function speedUpToNextStage(e) {
         return;
     }
     speedingUpRunning = true;
-    const currentDays = Math.floor(globalVars.globalNowSec / C_ONE_DAY_SECS);
-    const currentSecsInDay = globalVars.globalNowSec % C_ONE_DAY_SECS;
-    var restoreSecs = currentDays * C_ONE_DAY_SECS;
-    if (currentSecsInDay > globalVars.sunsetSec) {
+    const globalNow = new Date(globalVars.globalNowSec*1000);
+    const localeSecsInDay = globalNow.getHours()*3600 + globalNow.getMinutes()*60 + globalNow.getSeconds();
+    var restoreSecs = globalVars.globalNowSec - localeSecsInDay;
+    if (localeSecsInDay > globalVars.sunsetSec) {
         restoreSecs += C_ONE_DAY_SECS + globalVars.sunriseSec + globalVars.normalToChangeInSecs;
-    } else if (currentSecsInDay < globalVars.sunriseSec) {
+    } else if (localeSecsInDay < globalVars.sunriseSec) {
         restoreSecs += globalVars.sunriseSec + globalVars.normalToChangeInSecs;
     } else {
         restoreSecs += globalVars.sunsetSec + globalVars.normalToChangeInSecs;
     }
 
     refreshIntervalInMs = 5;
-    setSpeedGradually(3000, 5000, 100, () => {});
+    setSpeedGradually(6000, 2000, 100, () => {});
 
     var timer = setInterval(() => {
         if (globalVars.globalNowSec > restoreSecs) {
             clearInterval(timer);
-            setSpeedGradually(1, 5000, 100, ()=>{
+            setSpeedGradually(1, 2000, 100, ()=>{
                 speedingUpRunning = false;
                 refreshIntervalInMs = 1000;
             });
         }
     }, 100);
+}
+
+var toggleInProgress = false;
+
+function toggleSimulate(e) {
+    if (toggleInProgress) {
+        return;
+    }
+    toggleInProgress = true;
+    if (tickUnitInMs == 1) {
+        refreshIntervalInMs = 5;
+        setSpeedGradually(9000, 5000, 100, () => {
+            toggleInProgress = false;
+        });
+    } else {
+        setSpeedGradually(1, 5000, 100, () => {
+            toggleInProgress = false;
+            refreshIntervalInMs = 1000;
+        });
+    }
 }
 
 function startMain() {
@@ -135,6 +152,7 @@ function startMain() {
     canvas.ontouchend = hideText;
 
     next.onclick = speedUpToNextStage;
+    simulate.onclick = toggleSimulate;
 }
 
 startMain();
