@@ -116,7 +116,7 @@ function toggleSimulate(e) {
     toggleInProgress = true;
     if (tickUnitInMs == 1) {
         refreshIntervalInMs = 5;
-        setSpeedGradually(9000, 5000, 100, () => {
+        setSpeedGradually(3000, 5000, 100, () => {
             toggleInProgress = false;
         });
     } else {

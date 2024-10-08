@@ -9,6 +9,8 @@ import threading
 
 q = queue.Queue()
 
+result_queue = queue.Queue()
+
 
 # 从麦克风获取音频并写入文件
 def record_from_mic(recognizer, aud_source):
@@ -42,14 +44,13 @@ def long_running_listen(recognizer, aud_source):
 
 
 def long_running_recognize():
-    prev = None
     while True:
         audio = q.get().get_wav_data()
         # used = prev + audio if prev is not None else audio
         used = audio
         result, err = speech_to_text_baidu(used)
         print(result, err)
-        prev = audio
+        result_queue.put(result)
 
 
 if __name__ == "__main__":
